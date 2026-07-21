@@ -2,8 +2,10 @@
 
 ## Architecture Review and 15-Day Build Plan
 
-Status: Ready for implementation  
-Reviewed: July 21, 2026  
+Status: Ready for implementation
+
+Reviewed: July 21, 2026
+
 Target: Portfolio-grade MVP in 15 focused working days
 
 > **Decision:** Keep Kafka, Airflow, dbt, PostgreSQL, FastAPI, and Metabase. Remove Redis, Schema Registry/Avro, bronze promotion, and Great Expectations from the MVP. Spend the saved time on delivery correctness, idempotency, tests, CI, metric integrity, reproducible demo data, and documentation.
