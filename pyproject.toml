@@ -1,0 +1,58 @@
+[build-system]
+requires = ["uv_build==0.11.29"]
+build-backend = "uv_build"
+
+[project]
+name = "github-delivery-intelligence"
+version = "0.1.0"
+description = "Replayable GitHub engineering analytics with evidence-aware delivery metrics."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "confluent-kafka==2.15.0",
+    "fastapi==0.139.2",
+    "psycopg[binary,pool]==3.3.4",
+    "pydantic-settings==2.14.2",
+]
+
+[dependency-groups]
+dev = [
+    "mypy==2.3.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.0.0",
+    "ruff==0.15.22",
+]
+
+[tool.uv]
+required-version = "==0.11.29"
+
+[tool.uv.build-backend]
+module-name = "github_analytics"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".artifacts", "tools/build_build_plan_docx.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["github_analytics"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=github_analytics --cov-report=term-missing --cov-fail-under=100"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["github_analytics"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
