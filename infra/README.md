@@ -8,8 +8,20 @@ run `make up`. Compose waits for both services to report healthy before returnin
 PostgreSQL uses host port `55432` by default to avoid colliding with a conventional local
 installation on `5432`; containers still connect to it on `postgres:5432`.
 
-The PostgreSQL initialization script creates the `raw`, `serving`, `ops`, and
-`analytics` schemas. Initialization scripts run only when the named volume is empty.
+The PostgreSQL initialization scripts create the `raw`, `serving`, `ops`, and
+`analytics` schemas plus the append-only `raw.github_events` table. Initialization
+scripts run only when the named volume is empty.
+
+To apply a newly added idempotent schema script to an existing local named volume
+without deleting data, start the services and run:
+
+```bash
+make migrate
+```
+
+The raw table uses `(source, source_record_key)` as its durable uniqueness boundary.
+Webhook rows use the real GitHub delivery ID as both `source_record_key` and
+`delivery_id`; backfill rows must not fabricate a webhook delivery ID.
 
 Host processes connect to Kafka at `localhost:9092`. Future Compose services use the
 internal listener at `kafka:29092`, avoiding metadata that incorrectly redirects a
