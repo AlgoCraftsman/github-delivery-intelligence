@@ -11,16 +11,21 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "confluent-kafka==2.15.0",
     "fastapi==0.139.2",
+    "prometheus-client==0.25.0",
     "psycopg[binary,pool]==3.3.4",
     "pydantic-settings==2.14.2",
+    "uvicorn[standard]==0.51.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx2==2.7.0",
+    "jsonschema==4.26.0",
     "mypy==2.3.0",
     "pytest==9.1.1",
     "pytest-cov==7.0.0",
     "ruff==0.15.22",
+    "types-jsonschema==4.26.0.20260518",
 ]
 
 [tool.uv]
