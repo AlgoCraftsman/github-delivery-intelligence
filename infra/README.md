@@ -10,7 +10,9 @@ installation on `5432`; containers still connect to it on `postgres:5432`.
 
 `make up` also creates `github.events.raw.v1` with three partitions and
 `github.events.dlq.v1` with one partition if they do not already exist. `make topics`
-can be rerun safely; it never replaces an existing topic.
+can be rerun safely; it never replaces an existing topic. Broker-side automatic topic
+creation is disabled so a misspelled or prematurely used topic cannot silently inherit
+the three-partition broker default.
 
 The PostgreSQL initialization scripts create the `raw`, `serving`, `ops`, and
 `analytics` schemas plus the append-only `raw.github_events` table. Initialization
