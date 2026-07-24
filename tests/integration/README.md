@@ -7,5 +7,21 @@ proves a broker outage produces a bounded non-`2xx` HTTP response.
 broker. Start the services and run it with:
 
 ```bash
-RUN_KAFKA_INTEGRATION=1 uv run pytest tests/integration/test_webhook_kafka_live.py
+RUN_KAFKA_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_webhook_kafka_live.py
 ```
+
+The raw-storage test is also opt-in. Apply the checked-in migration, then run:
+
+```bash
+RUN_POSTGRES_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_raw_event_storage_live.py
+```
+
+The end-to-end warehouse test uses both local services. It proves database-commit /
+offset-commit crash replay and acknowledged poison-record DLQ handling:
+
+```bash
+RUN_WAREHOUSE_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_warehouse_consumer_live.py
+```
+
+Run the complete suite with coverage and live integrations by setting the relevant
+environment variables before `make check`.
