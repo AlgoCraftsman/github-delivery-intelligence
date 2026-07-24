@@ -1,0 +1,23 @@
+{
+  "action": "opened",
+  "installation": {
+    "id": 10001
+  },
+  "repository": {
+    "id": 20001,
+    "full_name": "example-org/delivery-demo"
+  },
+  "pull_request": {
+    "id": 30001,
+    "number": 17,
+    "state": "open",
+    "title": "Add a synthetic delivery fixture",
+    "user": {
+      "id": 40001,
+      "login": "example-contributor"
+    }
+  },
+  "fixture_extension": {
+    "safe_to_ignore": true
+  }
+}

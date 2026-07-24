@@ -17,10 +17,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx2==2.7.0",
+    "jsonschema==4.26.0",
     "mypy==2.3.0",
     "pytest==9.1.1",
     "pytest-cov==7.0.0",
     "ruff==0.15.22",
+    "types-jsonschema==4.26.0.20260518",
 ]
 
 [tool.uv]

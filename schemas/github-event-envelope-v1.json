@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AlgoCraftsman/github-delivery-intelligence/schemas/github-event-envelope-v1.json",
+  "title": "GitHub Event Envelope v1",
+  "description": "Validated GitHub webhook payload and routing metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "delivery_id",
+    "event_name",
+    "action",
+    "installation_id",
+    "repository_id",
+    "repository_full_name",
+    "received_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "delivery_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_name": {
+      "type": "string",
+      "enum": [
+        "pull_request",
+        "pull_request_review",
+        "workflow_run",
+        "deployment",
+        "deployment_status"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1
+    },
+    "installation_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "repository_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "repository_full_name": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "action": "created",
+  "installation": {
+    "id": 10001
+  },
+  "repository": {
+    "id": 20001,
+    "full_name": "example-org/delivery-demo"
+  },
+  "deployment": {
+    "id": 70001,
+    "environment": "synthetic-production",
+    "sha": "2222222222222222222222222222222222222222"
+  },
+  "fixture_extension": {
+    "safe_to_ignore": true
+  }
+}
