@@ -8,6 +8,10 @@ run `make up`. Compose waits for both services to report healthy before returnin
 PostgreSQL uses host port `55432` by default to avoid colliding with a conventional local
 installation on `5432`; containers still connect to it on `postgres:5432`.
 
+`make up` also creates `github.events.raw.v1` with three partitions and
+`github.events.dlq.v1` with one partition if they do not already exist. `make topics`
+can be rerun safely; it never replaces an existing topic.
+
 The PostgreSQL initialization scripts create the `raw`, `serving`, `ops`, and
 `analytics` schemas plus the append-only `raw.github_events` table. Initialization
 scripts run only when the named volume is empty.

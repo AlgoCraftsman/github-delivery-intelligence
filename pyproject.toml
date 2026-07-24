@@ -17,6 +17,9 @@ dependencies = [
     "uvicorn[standard]==0.51.0",
 ]
 
+[project.scripts]
+warehouse-writer = "github_analytics.consumers.warehouse:main"
+
 [dependency-groups]
 dev = [
     "httpx2==2.7.0",
