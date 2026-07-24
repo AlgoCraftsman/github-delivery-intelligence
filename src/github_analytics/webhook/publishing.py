@@ -15,6 +15,9 @@ class EnvelopePublisher(Protocol):
     async def publish(self, envelope: GitHubEventEnvelope) -> None:
         """Publish one validated event or raise ``PublishError``."""
 
+    async def is_ready(self) -> bool:
+        """Return whether the publisher's required dependency is reachable."""
+
 
 class UnconfiguredPublisher:
     """Fail closed until the Day 3 Kafka publisher is configured."""
@@ -22,3 +25,6 @@ class UnconfiguredPublisher:
     async def publish(self, envelope: GitHubEventEnvelope) -> None:
         del envelope
         raise PublishError("envelope publisher is not configured")
+
+    async def is_ready(self) -> bool:
+        return False

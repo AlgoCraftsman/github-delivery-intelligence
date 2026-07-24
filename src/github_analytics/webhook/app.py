@@ -3,11 +3,16 @@
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
+from time import perf_counter
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST
 from pydantic import ValidationError
 
 from github_analytics.webhook.config import WebhookSettings
+from github_analytics.webhook.kafka import create_kafka_publisher
+from github_analytics.webhook.metrics import WebhookMetrics
 from github_analytics.webhook.models import (
     GitHubEventEnvelope,
     GitHubEventName,
@@ -78,7 +83,40 @@ def create_app(
 
     resolved_settings = settings or WebhookSettings()  # type: ignore[call-arg]
     resolved_publisher = publisher or UnconfiguredPublisher()
+    metrics = WebhookMetrics()
     app = FastAPI(title="GitHub Delivery Intelligence Webhook Receiver")
+
+    @app.exception_handler(HTTPException)
+    async def handle_http_error(
+        request: Request,
+        error: HTTPException,
+    ) -> JSONResponse:
+        del request
+        metrics.requests.labels(outcome="rejected").inc()
+        return JSONResponse(
+            status_code=error.status_code,
+            content={"detail": error.detail},
+            headers=error.headers,
+        )
+
+    @app.get("/health/live")
+    async def liveness() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/health/ready")
+    async def readiness() -> JSONResponse:
+        ready = await resolved_publisher.is_ready()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "ok" if ready else "not_ready"},
+        )
+
+    @app.get("/metrics")
+    async def prometheus_metrics() -> Response:
+        return Response(
+            content=metrics.render(),
+            headers={"Content-Type": CONTENT_TYPE_LATEST},
+        )
 
     @app.post(
         "/webhooks/github",
@@ -126,14 +164,27 @@ def create_app(
                 detail="invalid webhook payload",
             ) from error
 
+        publish_started_at = perf_counter()
         try:
             await resolved_publisher.publish(envelope)
         except PublishError as error:
+            metrics.publishes.labels(outcome="failure").inc()
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="webhook event could not be published",
             ) from error
+        finally:
+            metrics.publish_duration.observe(perf_counter() - publish_started_at)
 
+        metrics.publishes.labels(outcome="success").inc()
+        metrics.requests.labels(outcome="accepted").inc()
         return WebhookReceipt(delivery_id=delivery_id)
 
     return app
+
+
+def create_runtime_app() -> FastAPI:
+    """Create the environment-configured receiver used by the service process."""
+
+    settings = WebhookSettings()  # type: ignore[call-arg]
+    return create_app(settings, publisher=create_kafka_publisher(settings))

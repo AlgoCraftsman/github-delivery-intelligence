@@ -1,7 +1,7 @@
 UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs webhook
 
 install:
 	$(UV) sync --frozen
@@ -41,3 +41,6 @@ ps:
 
 logs:
 	docker compose -f $(COMPOSE_FILE) logs --follow
+
+webhook:
+	$(UV) run uvicorn github_analytics.webhook:create_runtime_app --factory --env-file .env

@@ -5,9 +5,9 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 2 checkpoint adds a versioned event envelope, checked-in JSON Schema,
-sanitized webhook fixtures, and a raw-body HMAC receiver to the Day 1 platform
-foundation.
+current Day 3 checkpoint provides a signed webhook-to-Kafka acknowledgement path,
+versioned event contract, sanitized fixtures, and service health and metrics endpoints
+on the Day 1 platform foundation.
 
 ## Prerequisites
 
@@ -45,14 +45,33 @@ The outer envelope is strict and versioned. The original JSON payload remains in
 accepts unknown fields. Synthetic fixtures for all five event families live under
 `tests/fixtures`.
 
-Day 2 deliberately does not include the Kafka producer. The application fails closed
-with `503` when no publisher is configured; a `2xx` response is possible only after an
-injected publisher returns successfully. Day 3 will implement that interface with a
-bounded Kafka delivery acknowledgement.
+The application fails closed with `503` when no publisher is configured. Day 3
+implements the publisher with `acks=all`, producer idempotence, repository-keyed
+records, and a bounded delivery callback. Enqueuing a record locally is not treated as
+success: the receiver returns `202` only after Kafka reports delivery and returns `503`
+on queue, callback, or timeout failure.
+
+Run the local receiver after copying `.env.example` to `.env`, changing the webhook
+secret, and starting the core services:
+
+```bash
+cp .env.example .env
+make up
+make webhook
+```
+
+The receiver listens on `http://127.0.0.1:8000` by default:
+
+- `POST /webhooks/github` validates and durably publishes supported events.
+- `GET /health/live` reports process liveness.
+- `GET /health/ready` checks Kafka metadata availability.
+- `GET /metrics` exposes request, publish-result, and publish-latency metrics in
+  Prometheus text format.
 
 ## Current scope
 
-Day 2 establishes request validation and the event contract. Durable Kafka publishing,
-consumers, backfill, analytics models, orchestration, dashboards, and failure drills
-follow in the order documented by the build plan. The local single-broker Kafka
-deployment demonstrates client semantics; it is not a production availability topology.
+Day 3 establishes request validation, the event contract, and durable Kafka
+acknowledgement at the HTTP boundary. Consumers, backfill, analytics models,
+orchestration, dashboards, and broader failure drills follow in the order documented by
+the build plan. The local single-broker Kafka deployment demonstrates client semantics;
+it is not a production availability topology.

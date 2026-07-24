@@ -80,5 +80,5 @@ class GitHubEventEnvelope(BaseModel):
 class WebhookReceipt(BaseModel):
     """Minimal response that does not echo a private webhook payload."""
 
-    status: Literal["validated"] = "validated"
+    status: Literal["accepted"] = "accepted"
     delivery_id: NonEmptyString
