@@ -5,9 +5,8 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 3 checkpoint provides a signed webhook-to-Kafka acknowledgement path,
-versioned event contract, sanitized fixtures, and service health and metrics endpoints
-on the Day 1 platform foundation.
+current Day 4 checkpoint provides a signed webhook-to-Kafka acknowledgement path and a
+manual-commit warehouse consumer that lands versioned events idempotently in PostgreSQL.
 
 ## Prerequisites
 
@@ -22,11 +21,14 @@ on the Day 1 platform foundation.
 uv sync --frozen
 make check
 make up
+make migrate
 make ps
 ```
 
 `make up` starts Kafka on `localhost:9092` and PostgreSQL on `localhost:55432`, then waits
-for both health checks. The credentials in `.env.example` are local-only defaults.
+for both health checks and creates the raw and DLQ topics if absent. `make migrate`
+applies the idempotent raw-table migration to an existing named volume. The credentials
+in `.env.example` are local-only defaults.
 
 Stop services without deleting data:
 
@@ -68,10 +70,41 @@ The receiver listens on `http://127.0.0.1:8000` by default:
 - `GET /metrics` exposes request, publish-result, and publish-latency metrics in
   Prometheus text format.
 
+## Warehouse writer
+
+The `warehouse-writer` consumer group reads `github.events.raw.v1`, validates the
+versioned envelope, and inserts the complete original payload into
+`raw.github_events`. The durable uniqueness boundary is `(source, source_record_key)`;
+webhook rows use the real GitHub delivery ID as the source record key.
+
+Run it after copying `.env.example` to `.env`, starting the services, and applying the
+migration:
+
+```bash
+make up
+make migrate
+make warehouse
+```
+
+Automatic Kafka commits and automatic offset storage are disabled. For a valid record,
+the writer commits PostgreSQL before synchronously committing that message's Kafka
+offset. A replay after a crash in between those operations reaches the uniqueness
+constraint and creates no second raw row.
+
+Unprocessable records are published to `github.events.dlq.v1` with their original bytes
+base64 encoded and their source topic, partition, and offset retained. The writer waits
+for the DLQ delivery callback before committing the source offset. If PostgreSQL, DLQ
+publishing, or offset commit fails, the worker stops without advancing past an
+unconfirmed durable boundary.
+
+This is at-least-once processing with idempotent database effects. It is not end-to-end
+exactly-once delivery.
+
 ## Current scope
 
-Day 3 establishes request validation, the event contract, and durable Kafka
-acknowledgement at the HTTP boundary. Consumers, backfill, analytics models,
-orchestration, dashboards, and broader failure drills follow in the order documented by
-the build plan. The local single-broker Kafka deployment demonstrates client semantics;
-it is not a production availability topology.
+Day 4 establishes raw event storage, duplicate absorption, database-before-offset
+ordering, crash-window replay safety, and acknowledged poison-record DLQ handling.
+The independent PR monitor, backfill, analytics models, orchestration, dashboards, and
+broader failure drills follow in the order documented by the build plan. The local
+single-broker Kafka deployment demonstrates client semantics; it is not a production
+availability topology.
