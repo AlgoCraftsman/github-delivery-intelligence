@@ -1,7 +1,7 @@
 UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor
 
 install:
 	$(UV) sync --frozen
@@ -76,3 +76,6 @@ webhook:
 
 warehouse:
 	$(UV) run --env-file .env warehouse-writer
+
+pr-monitor:
+	$(UV) run --env-file .env pr-monitor
