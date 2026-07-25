@@ -16,6 +16,30 @@ CREATE TABLE IF NOT EXISTS serving.pull_request_projection_watermarks (
 COMMENT ON TABLE serving.pull_request_projection_watermarks IS
     'Latest source snapshot applied per pull request, including closed-state tombstones.';
 
+CREATE TABLE IF NOT EXISTS serving.pull_request_first_reviews (
+    repository_id bigint NOT NULL,
+    pull_request_id bigint NOT NULL,
+    review_id bigint NOT NULL,
+    reviewer_id bigint NOT NULL,
+    reviewer_login text NOT NULL,
+    submitted_at timestamptz NOT NULL,
+    projected_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (repository_id, pull_request_id),
+    CONSTRAINT pull_request_first_reviews_repository_id_positive
+        CHECK (repository_id > 0),
+    CONSTRAINT pull_request_first_reviews_pull_request_id_positive
+        CHECK (pull_request_id > 0),
+    CONSTRAINT pull_request_first_reviews_review_id_positive
+        CHECK (review_id > 0),
+    CONSTRAINT pull_request_first_reviews_reviewer_id_positive
+        CHECK (reviewer_id > 0),
+    CONSTRAINT pull_request_first_reviews_reviewer_login_nonempty
+        CHECK (btrim(reviewer_login) <> '')
+);
+
+COMMENT ON TABLE serving.pull_request_first_reviews IS
+    'Earliest eligible non-author review retained across close and reopen transitions.';
+
 CREATE TABLE IF NOT EXISTS serving.open_pull_requests (
     repository_id bigint NOT NULL,
     pull_request_id bigint NOT NULL,

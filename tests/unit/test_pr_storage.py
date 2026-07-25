@@ -125,9 +125,10 @@ def test_apply_open_pull_request_advances_watermark_and_upserts_projection() -> 
 
     assert storage.apply_pull_request(_snapshot()) is ProjectionOutcome.APPLIED
 
-    assert len(connection.calls) == 2
+    assert len(connection.calls) == 3
     assert "pull_request_projection_watermarks" in connection.calls[0][0]
     assert "INSERT INTO serving.open_pull_requests" in connection.calls[1][0]
+    assert "pull_request_first_reviews" in connection.calls[2][0]
     assert connection.calls[0][1]["delivery_id"] == "delivery-pr-17"
     assert connection.calls[1][1]["pull_request_number"] == 17
 
@@ -165,8 +166,9 @@ def test_author_review_is_ineligible_after_projecting_newer_snapshot() -> None:
     storage, connection = _storage([FakeResult(row=(NOW,))])
 
     assert storage.apply_review(review) is ReviewOutcome.INELIGIBLE
-    assert len(connection.calls) == 2
+    assert len(connection.calls) == 3
     assert "INSERT INTO serving.open_pull_requests" in connection.calls[1][0]
+    assert "pull_request_first_reviews" in connection.calls[2][0]
 
 
 def test_earliest_non_author_review_is_recorded_even_for_stale_pr_snapshot() -> None:
@@ -185,8 +187,9 @@ def test_earliest_non_author_review_is_recorded_even_for_stale_pr_snapshot() -> 
     )
 
     assert storage.apply_review(review) is ReviewOutcome.RECORDED
-    assert len(connection.calls) == 2
-    assert "first_eligible_review_at" in connection.calls[1][0]
+    assert len(connection.calls) == 3
+    assert "INSERT INTO serving.pull_request_first_reviews" in connection.calls[1][0]
+    assert "first_eligible_review_at" in connection.calls[2][0]
     assert connection.calls[1][1]["reviewer_id"] == 40002
 
 

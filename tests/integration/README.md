@@ -23,5 +23,14 @@ offset-commit crash replay and acknowledged poison-record DLQ handling:
 RUN_WAREHOUSE_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_warehouse_consumer_live.py
 ```
 
+The PR-monitor test uses both services and the Day 5 migration. It proves the
+`warehouse-writer` and `pr-monitor` groups can consume and commit the same record
+independently, selects the earliest eligible non-author review, deduplicates repeated
+stale sweeps, and cancels a pending alert when its PR closes:
+
+```bash
+RUN_PR_MONITOR_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_pr_monitor_live.py
+```
+
 Run the complete suite with coverage and live integrations by setting the relevant
 environment variables before `make check`.

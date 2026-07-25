@@ -158,20 +158,45 @@ WHERE alert_key = %(alert_key)s
 """
 
 _RECORD_FIRST_ELIGIBLE_REVIEW = """
-UPDATE serving.open_pull_requests
-SET
-    first_eligible_review_at = %(submitted_at)s,
-    first_eligible_review_id = %(review_id)s,
-    first_eligible_reviewer_id = %(reviewer_id)s,
-    first_eligible_reviewer_login = %(reviewer_login)s,
+INSERT INTO serving.pull_request_first_reviews (
+    repository_id,
+    pull_request_id,
+    review_id,
+    reviewer_id,
+    reviewer_login,
+    submitted_at
+) VALUES (
+    %(repository_id)s,
+    %(pull_request_id)s,
+    %(review_id)s,
+    %(reviewer_id)s,
+    %(reviewer_login)s,
+    %(submitted_at)s
+)
+ON CONFLICT (repository_id, pull_request_id) DO UPDATE SET
+    review_id = EXCLUDED.review_id,
+    reviewer_id = EXCLUDED.reviewer_id,
+    reviewer_login = EXCLUDED.reviewer_login,
+    submitted_at = EXCLUDED.submitted_at,
     projected_at = clock_timestamp()
-WHERE repository_id = %(repository_id)s
-  AND pull_request_id = %(pull_request_id)s
-  AND (
-      first_eligible_review_at IS NULL
-      OR %(submitted_at)s < first_eligible_review_at
-  )
-RETURNING first_eligible_review_id
+WHERE EXCLUDED.submitted_at
+    < serving.pull_request_first_reviews.submitted_at
+RETURNING review_id
+"""
+
+_SYNC_FIRST_REVIEW_TO_OPEN = """
+UPDATE serving.open_pull_requests AS open_pr
+SET
+    first_eligible_review_at = first_review.submitted_at,
+    first_eligible_review_id = first_review.review_id,
+    first_eligible_reviewer_id = first_review.reviewer_id,
+    first_eligible_reviewer_login = first_review.reviewer_login,
+    projected_at = clock_timestamp()
+FROM serving.pull_request_first_reviews AS first_review
+WHERE open_pr.repository_id = %(repository_id)s
+  AND open_pr.pull_request_id = %(pull_request_id)s
+  AND first_review.repository_id = open_pr.repository_id
+  AND first_review.pull_request_id = open_pr.pull_request_id
 """
 
 _INSERT_STALE_ALERTS = """
@@ -255,6 +280,8 @@ class PostgresPullRequestStorage:
                 _RECORD_FIRST_ELIGIBLE_REVIEW,
                 review_parameters,
             ).fetchone()
+            if recorded is not None:
+                connection.execute(_SYNC_FIRST_REVIEW_TO_OPEN, review_parameters)
         if recorded is None:
             return ReviewOutcome.UNCHANGED
         return ReviewOutcome.RECORDED
@@ -307,6 +334,7 @@ def _apply_snapshot_state(
 ) -> None:
     if snapshot.state is PullRequestState.OPEN:
         connection.execute(_UPSERT_OPEN_PULL_REQUEST, parameters)
+        connection.execute(_SYNC_FIRST_REVIEW_TO_OPEN, parameters)
         return
     connection.execute(_DELETE_CLOSED_PULL_REQUEST, parameters)
     connection.execute(_CANCEL_PENDING_ALERT, parameters)
