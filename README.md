@@ -5,8 +5,8 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 4 checkpoint provides a signed webhook-to-Kafka acknowledgement path and a
-manual-commit warehouse consumer that lands versioned events idempotently in PostgreSQL.
+current Day 5 checkpoint provides the signed webhook and idempotent raw warehouse path
+plus an independent PR monitor with a durable open-PR projection and alert outbox.
 
 ## Prerequisites
 
@@ -100,11 +100,37 @@ unconfirmed durable boundary.
 This is at-least-once processing with idempotent database effects. It is not end-to-end
 exactly-once delivery.
 
+## Pull-request monitor
+
+The independent `pr-monitor` consumer group reads the same raw topic without sharing
+progress with `warehouse-writer`. It maintains `serving.open_pull_requests`, selects the
+earliest submitted review from someone other than the PR author, and retains a source
+watermark so delayed snapshots cannot reopen or regress newer PR state.
+
+Run it after applying the migrations:
+
+```bash
+make up
+make migrate
+make pr-monitor
+```
+
+The default stale threshold is 24 hours and the sweep interval is 60 seconds. Both are
+configurable through `PR_MONITOR_STALE_AFTER_HOURS` and
+`PR_MONITOR_STALE_SWEEP_INTERVAL_SECONDS`. Draft PRs and PRs with an eligible review are
+excluded from the sweep.
+
+Each eligible stale PR creates an `ops.alert_outbox` row with a unique key derived from
+the real repository and pull-request identities. Repeated sweeps create no duplicate
+effect. Closing a PR removes it from the open projection and cancels its still-pending
+alert. External Slack dispatch remains deferred; the outbox is the durable Day 5
+boundary.
+
 ## Current scope
 
-Day 4 establishes raw event storage, duplicate absorption, database-before-offset
-ordering, crash-window replay safety, and acknowledged poison-record DLQ handling.
-The independent PR monitor, backfill, analytics models, orchestration, dashboards, and
+Day 5 adds independent consumer progress, monotonic open-PR state, first eligible review
+selection, and duplicate-safe stale alert intents to the Day 4 raw ingestion boundary.
+Backfill, analytics models, orchestration, dashboards, external alert delivery, and
 broader failure drills follow in the order documented by the build plan. The local
 single-broker Kafka deployment demonstrates client semantics; it is not a production
 availability topology.

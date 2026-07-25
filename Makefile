@@ -1,7 +1,7 @@
 UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor
 
 install:
 	$(UV) sync --frozen
@@ -64,10 +64,18 @@ migrate:
 		psql --username "$${POSTGRES_USER:-github_analytics}" \
 		--dbname "$${POSTGRES_DB:-github_analytics}" \
 		--set ON_ERROR_STOP=1 \
-		--file /docker-entrypoint-initdb.d/002_create_raw_github_events.sql
+		--command "\i /docker-entrypoint-initdb.d/002_create_raw_github_events.sql"
+	docker compose -f $(COMPOSE_FILE) exec -T postgres \
+		psql --username "$${POSTGRES_USER:-github_analytics}" \
+		--dbname "$${POSTGRES_DB:-github_analytics}" \
+		--set ON_ERROR_STOP=1 \
+		--command "\i /docker-entrypoint-initdb.d/003_create_pr_monitor.sql"
 
 webhook:
 	$(UV) run uvicorn github_analytics.webhook:create_runtime_app --factory --env-file .env
 
 warehouse:
 	$(UV) run --env-file .env warehouse-writer
+
+pr-monitor:
+	$(UV) run --env-file .env pr-monitor

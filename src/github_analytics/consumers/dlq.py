@@ -11,9 +11,19 @@ from typing import Any, Literal, Protocol, cast
 from confluent_kafka import KafkaError, KafkaException, Message, Producer
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from github_analytics.consumers.config import WarehouseSettings
-
 DlqDeliveryCallback = Callable[[KafkaError | None, Message], None]
+DlqFailureReason = Literal[
+    "invalid_github_event_envelope",
+    "invalid_pr_monitor_event",
+]
+
+
+class DlqSettings(Protocol):
+    """Configuration shared by consumers that publish poison records."""
+
+    kafka_bootstrap_servers: str
+    kafka_dlq_topic: str
+    kafka_dlq_publish_timeout_seconds: float
 
 
 class SourceMessage(Protocol):
@@ -37,7 +47,7 @@ class DeadLetterRecord(BaseModel):
 
     schema_version: Literal[1] = 1
     failed_at: AwareDatetime
-    failure_reason: Literal["invalid_github_event_envelope"]
+    failure_reason: DlqFailureReason
     source_topic: str = Field(min_length=1)
     source_partition: int = Field(ge=0)
     source_offset: int = Field(ge=0)
@@ -51,6 +61,7 @@ class DeadLetterRecord(BaseModel):
         message: SourceMessage,
         *,
         failed_at: datetime,
+        failure_reason: DlqFailureReason = "invalid_github_event_envelope",
     ) -> "DeadLetterRecord":
         """Retain source bytes and use a real delivery ID only when recoverable."""
 
@@ -63,7 +74,7 @@ class DeadLetterRecord(BaseModel):
             raise ValueError("consumed message is missing source lineage")
         return cls(
             failed_at=failed_at,
-            failure_reason="invalid_github_event_envelope",
+            failure_reason=failure_reason,
             source_topic=topic,
             source_partition=partition,
             source_offset=offset,
@@ -155,7 +166,11 @@ class KafkaDlqPublisher:
         self._producer.flush(self._publish_timeout_seconds)
 
 
-def create_dlq_publisher(settings: WarehouseSettings) -> KafkaDlqPublisher:
+def create_dlq_publisher(
+    settings: DlqSettings,
+    *,
+    client_id: str = "warehouse-writer-dlq",
+) -> KafkaDlqPublisher:
     """Create the DLQ producer with the same durable local boundary as webhooks."""
 
     message_timeout_ms = max(
@@ -165,7 +180,7 @@ def create_dlq_publisher(settings: WarehouseSettings) -> KafkaDlqPublisher:
     producer = Producer(
         {
             "bootstrap.servers": settings.kafka_bootstrap_servers,
-            "client.id": "warehouse-writer-dlq",
+            "client.id": client_id,
             "acks": "all",
             "enable.idempotence": True,
             "message.timeout.ms": message_timeout_ms,

@@ -18,6 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
+pr-monitor = "github_analytics.consumers.pr_monitor:main"
 warehouse-writer = "github_analytics.consumers.warehouse:main"
 
 [dependency-groups]
