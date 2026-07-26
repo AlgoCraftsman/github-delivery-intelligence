@@ -5,8 +5,9 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 5 checkpoint provides the signed webhook and idempotent raw warehouse path
-plus an independent PR monitor with a durable open-PR projection and alert outbox.
+current Day 6 checkpoint adds restartable pull-request, review, and commit history
+backfill to the signed webhook, idempotent raw warehouse, and independent PR-monitor
+paths.
 
 ## Prerequisites
 
@@ -126,11 +127,47 @@ effect. Closing a PR removes it from the open projection and cancels its still-p
 alert. External Slack dispatch remains deferred; the outbox is the durable Day 5
 boundary.
 
+## Historical pull-request backfill
+
+The `github-backfill` command reads pull requests through GitHub GraphQL, then traverses
+the complete review and commit connections for each PR created in an explicit half-open
+window (`start <= createdAt < end`). It uses forward cursor pagination with a configured
+page size from 1 through GitHub's maximum of 100.
+
+Copy `.env.example` to `.env` and replace the example values with a short-lived token
+and the real repository and GitHub App installation identities. Backfill source records
+do not fabricate webhook delivery IDs. Apply the checkpoint migration and run a bounded
+window:
+
+```bash
+make migrate
+make backfill \
+  BACKFILL_START=2026-01-01T00:00:00Z \
+  BACKFILL_END=2026-02-01T00:00:00Z
+```
+
+Each API page inserts its selected GraphQL resource objects into
+`raw.github_events` and advances `raw.backfill_checkpoints` in the same PostgreSQL
+transaction. The source keys use GitHub global node IDs plus the resource version or
+state where it can change. Repeating a page or restarting from a stored opaque cursor
+therefore produces no duplicate raw effect.
+
+The client reads GitHub's returned rate-limit headers rather than assuming a universal
+allowance. Primary exhaustion waits until `x-ratelimit-reset`; secondary limits honor
+`retry-after` or use bounded exponential waits beginning at the documented one-minute
+minimum. Retries stop after the configured budget.
+
+The repository pull-request connection has no direct creation-time range argument.
+This MVP orders by creation time, skips records before the requested window, and stops
+when it reaches the end. Very large repositories may therefore require scanning older
+PR pages before reaching a recent window. Workflow-run and deployment backfill follow
+on Day 7.
+
 ## Current scope
 
-Day 5 adds independent consumer progress, monotonic open-PR state, first eligible review
-selection, and duplicate-safe stale alert intents to the Day 4 raw ingestion boundary.
-Backfill, analytics models, orchestration, dashboards, external alert delivery, and
-broader failure drills follow in the order documented by the build plan. The local
-single-broker Kafka deployment demonstrates client semantics; it is not a production
-availability topology.
+Day 6 adds bounded PR, review, and commit history with durable cursor resume, stable
+source identities, and explicit primary/secondary rate-limit handling. Workflow and
+deployment backfill, Airflow orchestration, analytics models, dashboards, external
+alert delivery, and broader failure drills follow in the order documented by the build
+plan. The local single-broker Kafka deployment demonstrates client semantics; it is not
+a production availability topology.

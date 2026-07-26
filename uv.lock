@@ -148,6 +148,7 @@ source = { editable = "." }
 dependencies = [
     { name = "confluent-kafka" },
     { name = "fastapi" },
+    { name = "httpx2" },
     { name = "prometheus-client" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic-settings" },
@@ -156,7 +157,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx2" },
     { name = "jsonschema" },
     { name = "mypy" },
     { name = "pytest" },
@@ -169,6 +169,7 @@ dev = [
 requires-dist = [
     { name = "confluent-kafka", specifier = "==2.15.0" },
     { name = "fastapi", specifier = "==0.139.2" },
+    { name = "httpx2", specifier = "==2.7.0" },
     { name = "prometheus-client", specifier = "==0.25.0" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = "==3.3.4" },
     { name = "pydantic-settings", specifier = "==2.14.2" },
@@ -177,7 +178,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx2", specifier = "==2.7.0" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "mypy", specifier = "==2.3.0" },
     { name = "pytest", specifier = "==9.1.1" },

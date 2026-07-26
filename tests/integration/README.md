@@ -16,6 +16,13 @@ The raw-storage test is also opt-in. Apply the checked-in migration, then run:
 RUN_POSTGRES_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_raw_event_storage_live.py
 ```
 
+The same PostgreSQL opt-in covers transactional backfill cursor advancement and
+duplicate absorption:
+
+```bash
+RUN_POSTGRES_INTEGRATION=1 uv run pytest --no-cov tests/integration/test_backfill_storage_live.py
+```
+
 The end-to-end warehouse test uses both local services. It proves database-commit /
 offset-commit crash replay and acknowledged poison-record DLQ handling:
 
