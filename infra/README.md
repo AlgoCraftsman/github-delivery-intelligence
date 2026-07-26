@@ -16,8 +16,8 @@ the three-partition broker default.
 
 The PostgreSQL initialization scripts create the `raw`, `serving`, `ops`, and
 `analytics` schemas, the append-only `raw.github_events` table, the PR-monitor
-projection tables, and `ops.alert_outbox`. Initialization scripts run only when the
-named volume is empty.
+projection tables, `ops.alert_outbox`, and `raw.backfill_checkpoints`. Initialization
+scripts run only when the named volume is empty.
 
 To apply a newly added idempotent schema script to an existing local named volume
 without deleting data, start the services and run:
@@ -29,6 +29,11 @@ make migrate
 The raw table uses `(source, source_record_key)` as its durable uniqueness boundary.
 Webhook rows use the real GitHub delivery ID as both `source_record_key` and
 `delivery_id`; backfill rows must not fabricate a webhook delivery ID.
+
+`raw.backfill_checkpoints` keys progress by the real repository identity, resource,
+scope, and bounded time window. Its cursor is an opaque value returned by GitHub
+GraphQL. The backfill storage writes raw records and advances this cursor in one
+transaction so a restart either sees both effects or neither.
 
 `serving.pull_request_projection_watermarks` retains the newest applied source timestamp
 even after a PR closes. `serving.pull_request_first_reviews` preserves the earliest
