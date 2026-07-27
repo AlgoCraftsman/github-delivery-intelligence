@@ -18,6 +18,8 @@ class BackfillSettings(BaseSettings):
     github_repository_id: int = Field(gt=0)
     github_installation_id: int = Field(gt=0)
     github_graphql_url: str = Field(default="https://api.github.com/graphql", min_length=1)
+    github_rest_url: str = Field(default="https://api.github.com", min_length=1)
+    github_api_version: str = Field(default="2026-03-10", min_length=1)
     github_page_size: int = Field(default=50, ge=1, le=100)
     github_request_timeout_seconds: float = Field(default=20.0, gt=0, le=60)
     github_max_rate_limit_retries: int = Field(default=3, ge=0, le=10)

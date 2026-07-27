@@ -1,0 +1,4 @@
+# Backfill-only runtime. Webhook and Kafka consumer dependencies stay in their images.
+httpx2==2.7.0
+psycopg[binary,pool]==3.3.4
+pydantic-settings==2.14.2
