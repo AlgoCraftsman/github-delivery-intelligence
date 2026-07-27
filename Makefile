@@ -1,7 +1,8 @@
 UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
+AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor backfill
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor backfill airflow-image airflow-dag-check
 
 install:
 	$(UV) sync --frozen
@@ -89,3 +90,15 @@ backfill:
 	$(UV) run --env-file .env github-backfill \
 		--start "$(BACKFILL_START)" \
 		--end "$(BACKFILL_END)"
+
+airflow-image:
+	docker build \
+		--file airflow/Dockerfile \
+		--tag $(AIRFLOW_IMAGE) \
+		.
+
+airflow-dag-check: airflow-image
+	docker run --rm \
+		--env AIRFLOW__CORE__LOAD_EXAMPLES=False \
+		$(AIRFLOW_IMAGE) \
+		python /opt/airflow/check_dag.py

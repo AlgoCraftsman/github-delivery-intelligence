@@ -5,9 +5,9 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 6 checkpoint adds restartable pull-request, review, and commit history
-backfill to the signed webhook, idempotent raw warehouse, and independent PR-monitor
-paths.
+current Day 7 checkpoint adds restartable pull-request, review, commit, workflow-run,
+deployment, and deployment-status history backfill plus a thin manual Airflow DAG to
+the signed webhook, idempotent raw warehouse, and independent PR-monitor paths.
 
 ## Prerequisites
 
@@ -127,11 +127,13 @@ effect. Closing a PR removes it from the open projection and cancels its still-p
 alert. External Slack dispatch remains deferred; the outbox is the durable Day 5
 boundary.
 
-## Historical pull-request backfill
+## Historical GitHub backfill
 
 The `github-backfill` command reads pull requests through GitHub GraphQL, then traverses
 the complete review and commit connections for each PR created in an explicit half-open
-window (`start <= createdAt < end`). It uses forward cursor pagination with a configured
+window (`start <= createdAt < end`). It also reads workflow runs, deployments, and
+deployment statuses through GitHub's versioned REST API. GraphQL uses opaque forward
+cursors; REST checkpoints store the next positive page number. Both use a configured
 page size from 1 through GitHub's maximum of 100.
 
 Copy `.env.example` to `.env` and replace the example values with a short-lived token
@@ -157,17 +159,47 @@ allowance. Primary exhaustion waits until `x-ratelimit-reset`; secondary limits 
 `retry-after` or use bounded exponential waits beginning at the documented one-minute
 minimum. Retries stop after the configured budget.
 
-The repository pull-request connection has no direct creation-time range argument.
-This MVP orders by creation time, skips records before the requested window, and stops
-when it reaches the end. Very large repositories may therefore require scanning older
-PR pages before reaching a recent window. Workflow-run and deployment backfill follow
-on Day 7.
+The repository pull-request connection and deployment endpoint have no direct
+creation-time range argument. This MVP filters their complete paginated responses
+locally; very large repositories may therefore require scanning older pages. GitHub
+caps a filtered workflow-run search at 1,000 results, so the command fails without
+advancing that checkpoint when the requested window is too large and asks for a
+smaller window. GitHub retains historical deployment statuses for only 90 days, so an
+older backfill may have an explicit coverage gap even when deployment records remain.
+
+The token needs read access to repository contents and metadata for GraphQL, Actions
+read access for workflow runs, and Deployments read access for deployments and their
+statuses.
+
+## Airflow backfill orchestration
+
+`airflow/Dockerfile` extends the pinned Apache Airflow 3.3.0 Python 3.12 image, copies
+the tested application package, installs only its pinned backfill dependencies while
+pinning Airflow to the base-image version, runs `pip check`, and copies the DAG into the
+image. Keeping the backfill runtime separate avoids forcing the webhook service's newer
+FastAPI pin into Airflow. Build it and verify that Airflow reports no DAG import errors:
+
+```bash
+make airflow-image
+make airflow-dag-check
+```
+
+The `github_backfill` DAG is manual-only and allows one active run. Its trigger form
+requires an inclusive `window_start` and exclusive `window_end`, both as offset-aware
+ISO 8601 timestamps. The task invokes the tested `github-backfill` package and has
+three bounded retries. Because each API page and checkpoint commit in one PostgreSQL
+transaction, an Airflow retry resumes from durable progress and duplicate source keys
+remain harmless.
+
+The image is the Day 7 orchestration artifact; a multi-service Airflow deployment is
+deferred. See `airflow/README.md` for runtime environment and network requirements.
 
 ## Current scope
 
-Day 6 adds bounded PR, review, and commit history with durable cursor resume, stable
-source identities, and explicit primary/secondary rate-limit handling. Workflow and
-deployment backfill, Airflow orchestration, analytics models, dashboards, external
-alert delivery, and broader failure drills follow in the order documented by the build
-plan. The local single-broker Kafka deployment demonstrates client semantics; it is not
-a production availability topology.
+Day 7 adds bounded workflow-run and deployment history to the Day 6 GraphQL backfill,
+with stable REST source identities, durable page resume, explicit API-version and
+rate-limit handling, and a pinned manual Airflow DAG. Analytics models, dashboards,
+scheduled refresh orchestration, external alert delivery, and broader failure drills
+follow in the order documented by the build plan. The local single-broker Kafka
+deployment demonstrates client semantics; it is not a production availability
+topology.
