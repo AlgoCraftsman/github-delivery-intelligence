@@ -1,4 +1,4 @@
-"""Command-line boundary for bounded pull-request history backfills."""
+"""Command-line boundary for bounded GitHub history backfills."""
 
 import argparse
 import json
@@ -10,20 +10,30 @@ from psycopg_pool import ConnectionPool
 from github_analytics.backfill.config import BackfillSettings
 from github_analytics.backfill.github import GitHubPullRequestBackfill
 from github_analytics.backfill.graphql import GitHubGraphQLClient
+from github_analytics.backfill.rest import GitHubRestClient
+from github_analytics.backfill.rest_backfill import GitHubRestBackfill
 from github_analytics.backfill.storage import PostgresBackfillStorage
 
 
 def main(arguments: list[str] | None = None) -> int:
-    """Run one explicit half-open PR creation window."""
+    """Run one explicit half-open GitHub resource window."""
 
-    parser = argparse.ArgumentParser(description="Backfill GitHub pull-request history")
+    parser = argparse.ArgumentParser(description="Backfill GitHub engineering history")
     parser.add_argument("--start", required=True, type=_aware_datetime)
     parser.add_argument("--end", required=True, type=_aware_datetime)
     parsed = parser.parse_args(arguments)
     settings = BackfillSettings()  # type: ignore[call-arg]
-    client = GitHubGraphQLClient(
+    graphql_client = GitHubGraphQLClient(
         settings.github_token.get_secret_value(),
         url=settings.github_graphql_url,
+        request_timeout_seconds=settings.github_request_timeout_seconds,
+        max_rate_limit_retries=settings.github_max_rate_limit_retries,
+        secondary_backoff_seconds=settings.github_secondary_backoff_seconds,
+    )
+    rest_client = GitHubRestClient(
+        settings.github_token.get_secret_value(),
+        base_url=settings.github_rest_url,
+        api_version=settings.github_api_version,
         request_timeout_seconds=settings.github_request_timeout_seconds,
         max_rate_limit_retries=settings.github_max_rate_limit_retries,
         secondary_backoff_seconds=settings.github_secondary_backoff_seconds,
@@ -37,16 +47,28 @@ def main(arguments: list[str] | None = None) -> int:
             open=True,
         ) as pool:
             pool.wait(timeout=settings.database_pool_timeout_seconds)
+            storage = PostgresBackfillStorage(pool)
             summary = GitHubPullRequestBackfill(
-                client,
-                PostgresBackfillStorage(pool),
+                graphql_client,
+                storage,
                 repository=settings.github_repository,
                 repository_id=settings.github_repository_id,
                 installation_id=settings.github_installation_id,
                 page_size=settings.github_page_size,
             ).run(window_start=parsed.start, window_end=parsed.end)
+            summary = summary.plus(
+                GitHubRestBackfill(
+                    rest_client,
+                    storage,
+                    repository=settings.github_repository,
+                    repository_id=settings.github_repository_id,
+                    installation_id=settings.github_installation_id,
+                    page_size=settings.github_page_size,
+                ).run(window_start=parsed.start, window_end=parsed.end)
+            )
     finally:
-        client.close()
+        graphql_client.close()
+        rest_client.close()
     print(
         json.dumps(
             {

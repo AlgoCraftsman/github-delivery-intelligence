@@ -5,7 +5,7 @@ import json
 from contextlib import AbstractContextManager
 from datetime import UTC, datetime
 from types import TracebackType
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import pytest
 from pydantic import SecretStr
@@ -23,6 +23,8 @@ class FakeSettings:
     github_repository_id = 10
     github_installation_id = 20
     github_graphql_url = "https://example.test/graphql"
+    github_rest_url = "https://example.test"
+    github_api_version = "2026-03-10"
     github_page_size = 25
     github_request_timeout_seconds = 12.0
     github_max_rate_limit_retries = 2
@@ -53,8 +55,8 @@ class FakePool(AbstractContextManager["FakePool"]):
         self.waited = timeout
 
 
-class FakeClient:
-    created: ClassVar[list["FakeClient"]] = []
+class FakeGraphQLClient:
+    created: ClassVar[list[Any]] = []
 
     def __init__(self, token: str, **kwargs: object) -> None:
         self.token = token
@@ -66,17 +68,21 @@ class FakeClient:
         self.closed = True
 
 
+class FakeRestClient(FakeGraphQLClient):
+    created: ClassVar[list[Any]] = []
+
+
 class FakeStorage:
     def __init__(self, pool: FakePool) -> None:
         self.pool = pool
 
 
 class FakeBackfill:
-    created: ClassVar[list["FakeBackfill"]] = []
+    created: ClassVar[list[Any]] = []
 
     def __init__(
         self,
-        client: FakeClient,
+        client: object,
         storage: FakeStorage,
         **kwargs: object,
     ) -> None:
@@ -96,18 +102,35 @@ class FakeBackfill:
         return BackfillSummary(3, 4, 1)
 
 
+class FakeRestBackfill(FakeBackfill):
+    created: ClassVar[list[Any]] = []
+
+    def run(
+        self,
+        *,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> BackfillSummary:
+        self.window = (window_start, window_end)
+        return BackfillSummary(2, 3, 1)
+
+
 def test_main_wires_settings_runs_window_and_emits_structured_summary(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     FakePool.created.clear()
-    FakeClient.created.clear()
+    FakeGraphQLClient.created.clear()
+    FakeRestClient.created.clear()
     FakeBackfill.created.clear()
+    FakeRestBackfill.created.clear()
     monkeypatch.setattr(cli, "BackfillSettings", FakeSettings)
     monkeypatch.setattr(cli, "ConnectionPool", FakePool)
-    monkeypatch.setattr(cli, "GitHubGraphQLClient", FakeClient)
+    monkeypatch.setattr(cli, "GitHubGraphQLClient", FakeGraphQLClient)
+    monkeypatch.setattr(cli, "GitHubRestClient", FakeRestClient)
     monkeypatch.setattr(cli, "PostgresBackfillStorage", FakeStorage)
     monkeypatch.setattr(cli, "GitHubPullRequestBackfill", FakeBackfill)
+    monkeypatch.setattr(cli, "GitHubRestBackfill", FakeRestBackfill)
 
     assert (
         cli.main(
@@ -123,8 +146,11 @@ def test_main_wires_settings_runs_window_and_emits_structured_summary(
 
     assert FakePool.created[0].args == ("postgresql://example",)
     assert FakePool.created[0].waited == 5.0
-    assert FakeClient.created[0].token == "token"
-    assert FakeClient.created[0].closed
+    assert FakeGraphQLClient.created[0].token == "token"
+    assert FakeGraphQLClient.created[0].closed
+    assert FakeRestClient.created[0].token == "token"
+    assert FakeRestClient.created[0].kwargs["api_version"] == "2026-03-10"
+    assert FakeRestClient.created[0].closed
     assert FakeBackfill.created[0].kwargs == {
         "repository": "example/repo",
         "repository_id": 10,
@@ -135,10 +161,12 @@ def test_main_wires_settings_runs_window_and_emits_structured_summary(
         datetime(2026, 1, 1, tzinfo=UTC),
         datetime(2026, 2, 1, tzinfo=UTC),
     )
+    assert FakeRestBackfill.created[0].window == FakeBackfill.created[0].window
     output = json.loads(capsys.readouterr().out)
     assert output["event"] == "github_backfill_completed"
-    assert output["records_inserted"] == 4
-    assert output["duplicates_absorbed"] == 1
+    assert output["pages_persisted"] == 5
+    assert output["records_inserted"] == 7
+    assert output["duplicates_absorbed"] == 2
 
 
 @pytest.mark.parametrize(
