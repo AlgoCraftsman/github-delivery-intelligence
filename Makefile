@@ -2,7 +2,7 @@ UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor backfill airflow-image airflow-dag-check
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build airflow-image airflow-dag-check
 
 install:
 	$(UV) sync --frozen
@@ -90,6 +90,26 @@ backfill:
 	$(UV) run --env-file .env github-backfill \
 		--start "$(BACKFILL_START)" \
 		--end "$(BACKFILL_END)"
+
+dbt-debug:
+	$(UV) run dbt debug \
+		--project-dir dbt/github_analytics \
+		--profiles-dir dbt/github_analytics
+
+dbt-parse:
+	$(UV) run dbt parse \
+		--project-dir dbt/github_analytics \
+		--profiles-dir dbt/github_analytics
+
+dbt-freshness:
+	$(UV) run dbt source freshness \
+		--project-dir dbt/github_analytics \
+		--profiles-dir dbt/github_analytics
+
+dbt-build:
+	$(UV) run dbt build \
+		--project-dir dbt/github_analytics \
+		--profiles-dir dbt/github_analytics
 
 airflow-image:
 	docker build \

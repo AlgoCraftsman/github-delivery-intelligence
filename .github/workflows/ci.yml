@@ -63,6 +63,72 @@ jobs:
       - name: Validate Compose configuration
         run: docker compose -f infra/docker-compose.yml config --quiet
 
+  dbt:
+    name: Validate dbt staging models
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10-bookworm
+        env:
+          POSTGRES_DB: github_analytics
+          POSTGRES_USER: github_analytics
+          POSTGRES_PASSWORD: local_only_change_me
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username github_analytics --dbname github_analytics"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DBT_POSTGRES_HOST: localhost
+      DBT_POSTGRES_PORT: "5432"
+      DBT_POSTGRES_DB: github_analytics
+      DBT_POSTGRES_USER: github_analytics
+      DBT_POSTGRES_PASSWORD: local_only_change_me
+      DBT_POSTGRES_SCHEMA: analytics
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen
+
+      - name: Load deterministic raw fixtures
+        run: psql --set ON_ERROR_STOP=1 --file dbt/github_analytics/fixtures/load_github_events.sql
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGDATABASE: github_analytics
+          PGUSER: github_analytics
+          PGPASSWORD: local_only_change_me
+
+      - name: Check source freshness
+        run: >-
+          uv run dbt source freshness
+          --project-dir dbt/github_analytics
+          --profiles-dir dbt/github_analytics
+          --vars '{"github_events_identifier": "github_events_fixture"}'
+
+      - name: Build staging models and tests
+        run: >-
+          uv run dbt build
+          --project-dir dbt/github_analytics
+          --profiles-dir dbt/github_analytics
+          --vars '{"github_events_identifier": "github_events_fixture", "fixture_validation": true}'
+
   airflow:
     name: Validate Airflow image and DAG
     runs-on: ubuntu-latest
