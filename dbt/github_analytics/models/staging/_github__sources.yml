@@ -1,0 +1,76 @@
+version: 2
+
+sources:
+  - name: github_raw
+    description: >
+      Append-only GitHub webhook and backfill records. Production resolves to
+      raw.github_events; deterministic validation overrides only the identifier.
+    schema: raw
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after:
+          count: 1
+          period: hour
+        error_after:
+          count: 6
+          period: hour
+    tables:
+      - name: github_events
+        identifier: "{{ var('github_events_identifier', 'github_events') }}"
+        description: >
+          Stable landing boundary with one row per source and source_record_key.
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "repository_id > 0"
+        columns:
+          - name: event_id
+            description: Warehouse-generated immutable event identity.
+            data_tests:
+              - not_null
+              - unique
+          - name: source
+            description: Ingestion path that produced the raw row.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["webhook", "backfill"]
+          - name: source_record_key
+            description: Stable identity within the source.
+            data_tests:
+              - not_null
+          - name: event_name
+            description: GitHub resource family routed by the ingestion layer.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values:
+                      - pull_request
+                      - pull_request_review
+                      - pull_request_commit
+                      - workflow_run
+                      - deployment
+                      - deployment_status
+          - name: action
+            description: Webhook action or normalized backfill state.
+            data_tests:
+              - not_null
+          - name: repository_id
+            description: GitHub repository database identity.
+            data_tests:
+              - not_null
+          - name: installation_id
+            description: GitHub App installation identity used to retrieve the row.
+            data_tests:
+              - not_null
+          - name: ingested_at
+            description: PostgreSQL landing timestamp used for freshness.
+            data_tests:
+              - not_null
+          - name: payload
+            description: Full webhook payload or resource-specific backfill wrapper.
+            data_tests:
+              - not_null

@@ -1,0 +1,495 @@
+version: 2
+
+models:
+  - name: stg_github__pull_requests
+    description: >
+      Pull-request event snapshots normalized across webhook snake_case and
+      GraphQL backfill camelCase payloads. Grain: one raw event_id.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - &event_id
+        name: event_id
+        data_type: uuid
+        description: Immutable raw event lineage key.
+        data_tests: [not_null, unique]
+      - &source
+        name: source
+        data_type: text
+        description: Ingestion path.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["webhook", "backfill"]
+      - &source_record_key
+        name: source_record_key
+        data_type: text
+        description: Stable identity within the ingestion path.
+        data_tests: [not_null]
+      - &delivery_id
+        name: delivery_id
+        data_type: text
+        description: Webhook delivery GUID; null for backfill.
+      - &action
+        name: action
+        data_type: text
+        description: Webhook action or normalized backfill state.
+        data_tests: [not_null]
+      - &repository_id
+        name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - &repository_full_name
+        name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - &installation_id
+        name: installation_id
+        data_type: bigint
+        description: GitHub App installation identity.
+        data_tests: [not_null]
+      - name: pull_request_key
+        data_type: text
+        description: Cross-source repository_id:number identity.
+        data_tests: [not_null]
+      - name: pull_request_id
+        data_type: bigint
+        description: REST database identity when present.
+      - name: pull_request_node_id
+        data_type: text
+        description: GraphQL node identity when present.
+      - name: pull_request_number
+        data_type: integer
+        description: Repository-scoped pull-request number.
+        data_tests: [not_null]
+      - name: pull_request_state
+        data_type: text
+        description: Normalized GitHub pull-request state.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["open", "closed", "merged"]
+      - name: title
+        data_type: text
+        description: Pull-request title.
+        data_tests: [not_null]
+      - name: body
+        data_type: text
+        description: Pull-request body when supplied.
+      - name: is_draft
+        data_type: boolean
+        description: Whether the pull request is a draft.
+        data_tests: [not_null]
+      - name: author_id
+        data_type: bigint
+        description: REST author database identity when present.
+      - name: author_node_id
+        data_type: text
+        description: GraphQL author node identity when present.
+      - name: author_login
+        data_type: text
+        description: Author login.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Pull-request creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Pull-request source update time when present.
+      - name: closed_at
+        data_type: timestamp with time zone
+        description: Pull-request close time when present.
+      - name: merged_at
+        data_type: timestamp with time zone
+        description: Pull-request merge time when present.
+      - name: base_ref_name
+        data_type: text
+        description: Base branch name.
+      - name: head_ref_name
+        data_type: text
+        description: Head branch name.
+      - name: merge_commit_sha
+        data_type: text
+        description: Merge commit SHA when present.
+      - name: additions
+        data_type: integer
+        description: Added line count when present.
+      - name: deletions
+        data_type: integer
+        description: Deleted line count when present.
+      - name: changed_files
+        data_type: integer
+        description: Changed file count when present.
+      - &occurred_at
+        name: occurred_at
+        data_type: timestamp with time zone
+        description: Source event time selected by ingestion.
+      - &received_at
+        name: received_at
+        data_type: timestamp with time zone
+        description: Webhook receiver time; null for backfill.
+      - &ingested_at
+        name: ingested_at
+        data_type: timestamp with time zone
+        description: Warehouse landing time.
+        data_tests: [not_null]
+      - &kafka_partition
+        name: kafka_partition
+        data_type: integer
+        description: Kafka partition for webhook lineage.
+      - &kafka_offset
+        name: kafka_offset
+        data_type: bigint
+        description: Kafka offset for webhook lineage.
+      - &raw_payload
+        name: raw_payload
+        data_type: jsonb
+        description: Unmodified raw JSON payload.
+        data_tests: [not_null]
+
+  - name: stg_github__reviews
+    description: >
+      Pull-request reviews normalized across webhook and GraphQL backfill
+      payloads. Grain: one raw event_id.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - *event_id
+      - *source
+      - *source_record_key
+      - *delivery_id
+      - *action
+      - *repository_id
+      - *repository_full_name
+      - *installation_id
+      - name: review_key
+        data_type: text
+        description: Repository-scoped review identity.
+        data_tests: [not_null]
+      - name: review_id
+        data_type: bigint
+        description: Review database identity when present.
+      - name: review_node_id
+        data_type: text
+        description: Review GraphQL node identity when present.
+      - name: pull_request_node_id
+        data_type: text
+        description: Parent pull-request GraphQL node identity when present.
+      - name: pull_request_number
+        data_type: integer
+        description: Parent pull-request number when supplied by a webhook.
+      - name: review_state
+        data_type: text
+        description: Normalized review state.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["approved", "changes_requested", "commented", "dismissed", "pending"]
+      - name: reviewer_id
+        data_type: bigint
+        description: Reviewer database identity when present.
+      - name: reviewer_node_id
+        data_type: text
+        description: Reviewer GraphQL node identity when present.
+      - name: reviewer_login
+        data_type: text
+        description: Reviewer login.
+        data_tests: [not_null]
+      - name: body
+        data_type: text
+        description: Review body when supplied.
+      - name: commit_sha
+        data_type: text
+        description: Reviewed commit SHA when supplied.
+      - name: submitted_at
+        data_type: timestamp with time zone
+        description: Review submission time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Review update time when present.
+      - *occurred_at
+      - *received_at
+      - *ingested_at
+      - *kafka_partition
+      - *kafka_offset
+      - *raw_payload
+
+  - name: stg_github__pull_request_commits
+    description: >
+      GraphQL pull-request commit associations. Grain: one raw event_id; each
+      source record represents one PR-to-commit association.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - *event_id
+      - *source
+      - *source_record_key
+      - *action
+      - *repository_id
+      - *repository_full_name
+      - *installation_id
+      - name: pull_request_commit_key
+        data_type: text
+        description: Repository-scoped association identity.
+        data_tests: [not_null]
+      - name: association_node_id
+        data_type: text
+        description: GraphQL PullRequestCommit node identity.
+        data_tests: [not_null]
+      - name: pull_request_node_id
+        data_type: text
+        description: Parent pull-request GraphQL node identity.
+        data_tests: [not_null]
+      - name: commit_node_id
+        data_type: text
+        description: GraphQL commit node identity.
+        data_tests: [not_null]
+      - name: commit_sha
+        data_type: text
+        description: Git commit SHA.
+        data_tests: [not_null]
+      - name: commit_message
+        data_type: text
+        description: Commit message.
+      - name: authored_at
+        data_type: timestamp with time zone
+        description: Commit author time.
+      - name: committed_at
+        data_type: timestamp with time zone
+        description: Commit committer time.
+        data_tests: [not_null]
+      - name: author_name
+        data_type: text
+        description: Commit author display name.
+      - name: author_email
+        data_type: text
+        description: Commit author email as returned by GitHub.
+      - name: author_node_id
+        data_type: text
+        description: Linked GitHub author node identity.
+      - name: author_login
+        data_type: text
+        description: Linked GitHub author login.
+      - name: additions
+        data_type: integer
+        description: Added line count.
+      - name: deletions
+        data_type: integer
+        description: Deleted line count.
+      - name: changed_files
+        data_type: integer
+        description: Changed file count.
+      - *occurred_at
+      - *ingested_at
+      - *raw_payload
+
+  - name: stg_github__workflow_runs
+    description: >
+      Workflow-run snapshots normalized across webhook and REST backfill
+      payloads. Grain: one raw event_id.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - *event_id
+      - *source
+      - *source_record_key
+      - *delivery_id
+      - *action
+      - *repository_id
+      - *repository_full_name
+      - *installation_id
+      - name: workflow_run_key
+        data_type: text
+        description: Repository, run, and attempt identity.
+        data_tests: [not_null]
+      - name: workflow_run_id
+        data_type: bigint
+        description: Workflow run database identity.
+        data_tests: [not_null]
+      - name: run_attempt
+        data_type: integer
+        description: Workflow run attempt, defaulting to one for older webhook payloads.
+        data_tests: [not_null]
+      - name: workflow_id
+        data_type: bigint
+        description: Workflow definition database identity.
+      - name: workflow_name
+        data_type: text
+        description: Workflow display name.
+        data_tests: [not_null]
+      - name: trigger_event
+        data_type: text
+        description: GitHub event that triggered the workflow.
+      - name: workflow_status
+        data_type: text
+        description: Normalized workflow execution status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["queued", "in_progress", "completed", "waiting", "requested", "pending"]
+      - name: conclusion
+        data_type: text
+        description: Final conclusion; null before completion.
+      - name: head_branch
+        data_type: text
+        description: Workflow head branch.
+      - name: head_sha
+        data_type: text
+        description: Workflow head commit SHA.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Workflow run creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Workflow run update time.
+      - name: run_started_at
+        data_type: timestamp with time zone
+        description: Workflow execution start time.
+      - *occurred_at
+      - *received_at
+      - *ingested_at
+      - *kafka_partition
+      - *kafka_offset
+      - *raw_payload
+
+  - name: stg_github__deployments
+    description: >
+      Deployment records normalized across webhook and REST backfill payloads.
+      Grain: one raw event_id.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - *event_id
+      - *source
+      - *source_record_key
+      - *delivery_id
+      - *action
+      - *repository_id
+      - *repository_full_name
+      - *installation_id
+      - name: deployment_key
+        data_type: text
+        description: Repository-scoped deployment identity.
+        data_tests: [not_null]
+      - name: deployment_id
+        data_type: bigint
+        description: Deployment database identity.
+        data_tests: [not_null]
+      - name: environment
+        data_type: text
+        description: Deployment environment.
+        data_tests: [not_null]
+      - name: deployment_sha
+        data_type: text
+        description: Deployed Git commit SHA.
+        data_tests: [not_null]
+      - name: git_ref
+        data_type: text
+        description: Requested deployment ref.
+      - name: deployment_task
+        data_type: text
+        description: GitHub deployment task.
+      - name: is_transient_environment
+        data_type: boolean
+        description: GitHub transient-environment flag.
+        data_tests: [not_null]
+      - name: is_production_environment
+        data_type: boolean
+        description: GitHub production-environment flag.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Deployment creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Deployment update time.
+      - *occurred_at
+      - *received_at
+      - *ingested_at
+      - *kafka_partition
+      - *kafka_offset
+      - *raw_payload
+
+  - name: stg_github__deployment_statuses
+    description: >
+      Deployment status records normalized across webhook and REST backfill
+      payloads. Grain: one raw event_id.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - *event_id
+      - *source
+      - *source_record_key
+      - *delivery_id
+      - *action
+      - *repository_id
+      - *repository_full_name
+      - *installation_id
+      - name: deployment_status_key
+        data_type: text
+        description: Repository-scoped deployment-status identity.
+        data_tests: [not_null]
+      - name: deployment_status_id
+        data_type: bigint
+        description: Deployment status database identity.
+        data_tests: [not_null]
+      - name: deployment_id
+        data_type: bigint
+        description: Parent deployment database identity.
+        data_tests: [not_null]
+      - name: deployment_state
+        data_type: text
+        description: Normalized deployment status state.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["error", "failure", "inactive", "in_progress", "queued", "pending", "success"]
+      - name: environment
+        data_type: text
+        description: Deployment environment when supplied.
+      - name: description
+        data_type: text
+        description: Deployment status description.
+      - name: environment_url
+        data_type: text
+        description: Deployed environment URL.
+      - name: log_url
+        data_type: text
+        description: Deployment log URL.
+      - name: creator_id
+        data_type: bigint
+        description: Status creator database identity.
+      - name: creator_login
+        data_type: text
+        description: Status creator login.
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Deployment status creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Deployment status update time.
+      - *occurred_at
+      - *received_at
+      - *ingested_at
+      - *kafka_partition
+      - *kafka_offset
+      - *raw_payload

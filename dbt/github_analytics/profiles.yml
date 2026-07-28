@@ -1,0 +1,16 @@
+github_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('DBT_POSTGRES_PORT', '55432') | int }}"
+      dbname: "{{ env_var('DBT_POSTGRES_DB', 'github_analytics') }}"
+      user: "{{ env_var('DBT_POSTGRES_USER', 'github_analytics') }}"
+      password: "{{ env_var('DBT_POSTGRES_PASSWORD', 'local_only_change_me') }}"
+      schema: "{{ env_var('DBT_POSTGRES_SCHEMA', 'analytics') }}"
+      threads: 4
+      connect_timeout: 10
+      retries: 1
+      keepalives_idle: 0
+      sslmode: prefer

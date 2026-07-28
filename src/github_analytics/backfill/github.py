@@ -233,7 +233,7 @@ class GitHubPullRequestBackfill:
                         resource="pull_request_reviews",
                         connection_name="reviews",
                         query=_REVIEWS_QUERY,
-                        record_factory=self._review_record,
+                        record_factory=partial(self._review_record, pull_request_id),
                     )
                 )
                 summary = summary.plus(
@@ -331,7 +331,11 @@ class GitHubPullRequestBackfill:
             payload=self._payload("pull_request", node),
         )
 
-    def _review_record(self, node: dict[str, Any]) -> BackfillRecord:
+    def _review_record(
+        self,
+        pull_request_id: str,
+        node: dict[str, Any],
+    ) -> BackfillRecord:
         node_id = _required_string(node, "id")
         state = _required_string(node, "state").lower()
         submitted_at = _optional_aware_datetime(node, "submittedAt")
@@ -343,7 +347,10 @@ class GitHubPullRequestBackfill:
             repository_id=self._repository_id,
             installation_id=self._installation_id,
             occurred_at=occurred_at,
-            payload=self._payload("pull_request_review", node),
+            payload={
+                **self._payload("pull_request_review", node),
+                "pull_request_id": pull_request_id,
+            },
         )
 
     def _commit_record(
