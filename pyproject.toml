@@ -25,6 +25,8 @@ warehouse-writer = "github_analytics.consumers.warehouse:main"
 
 [dependency-groups]
 dev = [
+    "dbt-core==1.12.0",
+    "dbt-postgres==1.11.0",
     "jsonschema==4.26.0",
     "mypy==2.3.0",
     "pytest==9.1.1",

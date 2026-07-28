@@ -242,6 +242,7 @@ def test_run_paginates_all_resources_filters_window_and_persists_stable_keys() -
     )
     assert records["pull_request"].action == "merged"
     assert records["pull_request_review"].source_record_key.endswith("REVIEW_2:approved")
+    assert records["pull_request_review"].payload["pull_request_id"] == "PR_1"
     assert records["pull_request_commit"].source_record_key.endswith("PR_COMMIT_1")
     assert records["pull_request_commit"].payload["pull_request_id"] == "PR_1"
     assert records["pull_request_commit"].payload["repository"] == {
