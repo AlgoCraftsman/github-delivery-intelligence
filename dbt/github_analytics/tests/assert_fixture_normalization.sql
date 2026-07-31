@@ -16,11 +16,20 @@ with paired_keys as (
     select 'deployment_status', deployment_status_key, source
     from {{ ref('stg_github__deployment_statuses') }}
 ),
-unpaired as (
-    select resource, resource_key
+key_counts as (
+    select
+        resource,
+        resource_key,
+        count(*) as snapshot_count,
+        count(distinct source) as source_count
     from paired_keys
     group by resource, resource_key
-    having count(*) != 2 or count(distinct source) != 2
+),
+unpaired as (
+    select resource, resource_key
+    from key_counts
+    where snapshot_count > 1
+      and (snapshot_count != 2 or source_count != 2)
 ),
 missing_review_parent as (
     select 'review_parent' as resource, review_key as resource_key
