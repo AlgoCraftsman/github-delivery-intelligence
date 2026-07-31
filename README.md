@@ -5,9 +5,10 @@ PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware softwa
 delivery metrics.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 8 checkpoint adds contracted dbt staging models and deterministic
-fixture-backed validation to the signed webhook, idempotent raw warehouse, independent
-PR monitor, restartable history backfill, and manual Airflow orchestration paths.
+current Day 9 checkpoint adds resolved pull-request lifecycle, first-review,
+production-deployment, and change-to-deployment intermediate models to the contracted
+dbt staging boundary, signed webhook, idempotent raw warehouse, independent PR monitor,
+restartable history backfill, and manual Airflow orchestration paths.
 
 ## Prerequisites
 
@@ -194,9 +195,9 @@ remain harmless.
 The image is the Day 7 orchestration artifact; a multi-service Airflow deployment is
 deferred. See `airflow/README.md` for runtime environment and network requirements.
 
-## dbt staging models
+## dbt analytics models
 
-The Day 8 dbt project pins `dbt-core==1.12.0` and `dbt-postgres==1.11.0`. The adapter
+The dbt project pins `dbt-core==1.12.0` and `dbt-postgres==1.11.0`. The adapter
 and Core use independent version numbers; this is the compatible stable pair released
 for the reviewed baseline. Six contracted staging views normalize webhook payloads and
 GraphQL/REST backfill wrappers:
@@ -212,6 +213,18 @@ Each view retains `event_id`, source identity, repository and installation linea
 warehouse load time, and the raw JSON payload. Entity keys normalize both ingestion
 paths without pretending that a GraphQL node ID is a REST database ID.
 
+Four contracted intermediate views collapse duplicate snapshots and expose reusable
+stateful logic:
+
+- resolved pull-request lifecycle
+- first eligible non-author review
+- production deployments with resolved status history
+- exact-SHA change-to-successful-deployment linkage
+
+The change linkage prefers merge-commit evidence and falls back to a directly matched
+pull-request commit. It does not infer Git ancestry or claim coverage for an unmatched
+change.
+
 Against the live `raw.github_events` table:
 
 ```bash
@@ -224,13 +237,14 @@ Deterministic validation uses the dedicated `raw.github_events_fixture` table. T
 loader transactionally reloads only that fixture table, gives resource timestamps
 fixed synthetic values, and sets warehouse load time relative to execution so
 freshness does not expire. CI loads it, runs `dbt source freshness`, and runs `dbt
-build` with fixture assertions enabled. Exact local commands and expected resource
-counts are documented in `dbt/github_analytics/README.md`.
+build` with fixture assertions enabled. Exact local commands, resource counts, and
+manually calculated Day 9 outcomes are documented in
+`dbt/github_analytics/README.md`.
 
 ## Current scope
 
-Day 8 establishes the tested source-to-staging analytics boundary. Stateful lifecycle
-resolution, intermediate models, marts, dashboards, scheduled refresh orchestration,
-external alert delivery, and broader failure drills follow in build-plan order. The
-local single-broker Kafka deployment demonstrates client semantics; it is not a
-production availability topology.
+Day 9 establishes the tested source-to-intermediate analytics boundary. Marts, metric
+status and coverage, dashboards, scheduled refresh orchestration, external alert
+delivery, and broader failure drills follow in build-plan order. The local
+single-broker Kafka deployment demonstrates client semantics; it is not a production
+availability topology.

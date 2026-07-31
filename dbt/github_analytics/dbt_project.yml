@@ -23,6 +23,10 @@ models:
       +materialized: view
       +schema: staging
       +tags: ["staging"]
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+      +tags: ["intermediate"]
 
 flags:
   require_generic_test_arguments_property: true
