@@ -9,6 +9,10 @@ This directory owns cross-model and fixture-specific invariants:
 - backfill reviews and commit associations must retain their parent PR node ID.
 - resolved intermediate rows must match manually calculated lifecycle, review,
   deployment, and lead-time outcomes;
+- the fixture date spine must retain empty dates at exact deterministic bounds;
+- configured deployment signals, configured workflow proxies, missing repository
+  configuration, unmatched changes, and partial linkage coverage must produce exact
+  mart outcomes;
 - resolved timestamps and durations cannot run backward.
 
 Fixture-only assertions compile to empty result sets unless

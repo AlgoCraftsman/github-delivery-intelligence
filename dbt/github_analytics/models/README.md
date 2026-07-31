@@ -34,3 +34,25 @@ Day 9 models are contracted views in `<target_schema>_intermediate`.
 
 Intermediate models do not infer commit ancestry. Unmatched changes remain unmatched
 so Day 10 coverage calculations can distinguish measured values from evidence gaps.
+
+## Marts
+
+Day 10 models are contracted views in `<target_schema>_marts`.
+
+| Model | Grain | Responsibility |
+|---|---|---|
+| `dim_repository` | one repository | observed identity plus checked-in evidence conventions |
+| `dim_date` | one calendar date | contiguous, observed-event-bounded reporting spine |
+| `fct_pull_requests` | one repository-scoped PR | lifecycle, review timing, and first exact-SHA production link |
+| `fct_deployments` | one deployment or configured workflow run | classify measured signals, proxies, and exclusions |
+| `fct_delivery_performance_daily` | one repository/date/metric | metric value, status, coverage, version, and exclusion reason |
+
+`fct_delivery_performance_daily` is long-form so every metric result has the same
+integrity contract. Reporting dates use each repository's configured timezone.
+Deployment frequency keeps empty dates as measured zeroes for configured
+repositories. Change lead time is averaged by the repository-local merge date and
+its coverage is linked eligible changes divided by eligible merged changes.
+
+The allowed statuses are `measured`, `configured_proxy`, and `unavailable`.
+Unavailable rows have a null metric value and a machine-readable exclusion reason.
+No mart infers Git ancestry or turns CI failures into production failures.

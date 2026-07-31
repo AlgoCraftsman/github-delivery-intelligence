@@ -225,6 +225,20 @@ The change linkage prefers merge-commit evidence and falls back to a directly ma
 pull-request commit. It does not infer Git ancestry or claim coverage for an unmatched
 change.
 
+Five contracted marts expose the core analytics vertical slice:
+
+- repository evidence configuration and a bounded date spine
+- pull-request lifecycle and exact-SHA deployment linkage
+- measured deployment statuses and explicitly configured workflow proxies
+- one repository/date/metric row with status, coverage, definition version, and
+  exclusion reason
+
+Deployment frequency is measured only after repository configuration. Change lead
+time is calculated only for successfully linked changes and publishes linkage
+coverage. Failed deployment recovery time, change failure rate, and deployment
+rework rate remain unavailable until defensible intervention evidence is configured
+and modeled; CI failures are not treated as production failures.
+
 Against the live `raw.github_events` table:
 
 ```bash
@@ -238,13 +252,14 @@ loader transactionally reloads only that fixture table, gives resource timestamp
 fixed synthetic values, and sets warehouse load time relative to execution so
 freshness does not expire. CI loads it, runs `dbt source freshness`, and runs `dbt
 build` with fixture assertions enabled. Exact local commands, resource counts, and
-manually calculated Day 9 outcomes are documented in
+manually calculated Day 9 and Day 10 outcomes are documented in
 `dbt/github_analytics/README.md`.
 
 ## Current scope
 
-Day 9 establishes the tested source-to-intermediate analytics boundary. Marts, metric
-status and coverage, dashboards, scheduled refresh orchestration, external alert
-delivery, and broader failure drills follow in build-plan order. The local
+Day 10 establishes the tested source-to-mart analytics boundary, including metric
+status and evidence coverage. The scope-gate decision is recorded in
+`docs/day-10-scope-gate.md`. Dashboards, scheduled refresh orchestration, external
+alert delivery, and broader failure drills remain later build-plan work. The local
 single-broker Kafka deployment demonstrates client semantics; it is not a production
 availability topology.

@@ -1,9 +1,10 @@
 # GitHub analytics dbt project
 
-This project turns append-only `raw.github_events` rows into typed staging views and
-state-resolved intermediate views while preserving source lineage. It requires Python
-3.12, `dbt-core==1.12.0`, and `dbt-postgres==1.11.0`; all three are installed by the
-repository's locked uv environment.
+This project turns append-only `raw.github_events` rows into typed staging views,
+state-resolved intermediate views, and evidence-aware analytics marts while
+preserving source lineage. It requires Python 3.12, `dbt-core==1.12.0`, and
+`dbt-postgres==1.11.0`; all three are installed by the repository's locked uv
+environment.
 
 ## Configure PostgreSQL
 
@@ -42,7 +43,7 @@ before bypassing that signal.
 ## Run deterministic fixture validation
 
 Use a disposable PostgreSQL database. The loader creates and transactionally reloads
-only `raw.github_events_fixture`, inserts eleven synthetic rows, and gives them a
+only `raw.github_events_fixture`, inserts seventeen synthetic rows, and gives them a
 current warehouse load watermark. It never truncates or mutates
 `raw.github_events`.
 
@@ -61,10 +62,10 @@ uv run dbt build \
   --vars '{"github_events_identifier": "github_events_fixture", "fixture_validation": true}'
 ```
 
-The expected fixture output is two rows each for pull requests, reviews, workflow
-runs, deployments, and deployment statuses, plus one pull-request commit
-association. The paired resources must normalize webhook and backfill payloads to the
-same entity keys.
+The expected staging output is five pull-request snapshots, two review snapshots,
+one pull-request commit association, three workflow-run snapshots, three deployment
+snapshots, and three deployment-status snapshots. The original webhook/backfill
+pairs must still normalize to the same entity keys.
 
 The paired snapshots collapse into one row in each Day 9 path. Their exact manually
 calculated outcomes are:
@@ -78,5 +79,20 @@ calculated outcomes are:
 
 The fixture assertion also proves that each webhook/backfill pair contributes two
 snapshots from two ingestion paths without producing duplicate intermediate rows.
+
+Day 10 fixture cases prove these mart outcomes:
+
+| Evidence case | Expected outcome |
+|---|---|
+| configured deployment status | `measured`; deployment frequency `1` on 2026-01-13 |
+| two eligible changes, one linked | change lead time `93,900` seconds with `0.5` coverage |
+| configured workflow named `Release production` | `configured_proxy` with exact-SHA linkage |
+| fully observed unconfigured repository | `unavailable` with `missing_repository_configuration` |
+| dates without deployments | measured deployment frequency `0`; null coverage denominator |
+| instability metrics | `unavailable` with metric-specific missing-evidence reasons |
+
+Temporal contract tests reject negative lifecycle, review, deployment-success, and
+change-lead durations. The date dimension is deterministically bounded from
+2026-01-10 through 2026-01-13 for the isolated fixture.
 
 Generated artifacts live under `target/` and are ignored.
