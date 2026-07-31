@@ -1,9 +1,9 @@
 # GitHub analytics dbt project
 
-This project turns append-only `raw.github_events` rows into typed staging views while
-preserving source lineage. It requires Python 3.12, `dbt-core==1.12.0`, and
-`dbt-postgres==1.11.0`; all three are installed by the repository's locked uv
-environment.
+This project turns append-only `raw.github_events` rows into typed staging views and
+state-resolved intermediate views while preserving source lineage. It requires Python
+3.12, `dbt-core==1.12.0`, and `dbt-postgres==1.11.0`; all three are installed by the
+repository's locked uv environment.
 
 ## Configure PostgreSQL
 
@@ -65,5 +65,18 @@ The expected fixture output is two rows each for pull requests, reviews, workflo
 runs, deployments, and deployment statuses, plus one pull-request commit
 association. The paired resources must normalize webhook and backfill payloads to the
 same entity keys.
+
+The paired snapshots collapse into one row in each Day 9 path. Their exact manually
+calculated outcomes are:
+
+| Intermediate model | Fixture outcome |
+|---|---|
+| `int_pr_lifecycle` | PR `20001:17` merged after 180,000 seconds |
+| `int_first_eligible_review` | first non-author review after 82,800 seconds |
+| `int_production_deployments` | deployment `20001:70001` succeeded after 300 seconds |
+| `int_change_to_deployment` | merge commit linked to production after 93,900 seconds |
+
+The fixture assertion also proves that each webhook/backfill pair contributes two
+snapshots from two ingestion paths without producing duplicate intermediate rows.
 
 Generated artifacts live under `target/` and are ignored.

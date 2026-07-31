@@ -15,9 +15,22 @@ column contracts.
 | `stg_github__deployment_statuses` | one raw deployment status | repository plus deployment-status ID |
 
 These models type and rename JSON fields; they do not choose a latest snapshot or
-collapse webhook/backfill duplicates. Stateful resolution belongs in Day 9
-intermediate models.
+collapse webhook/backfill duplicates.
 
 The ephemeral `stg_github__events` model centralizes raw lineage and source selection.
 Production reads `raw.github_events`; tests may override the identifier without
 changing model SQL.
+
+## Intermediate
+
+Day 9 models are contracted views in `<target_schema>_intermediate`.
+
+| Model | Grain | Resolution |
+|---|---|---|
+| `int_pr_lifecycle` | one repository-scoped pull request | latest state plus first/last snapshot lineage |
+| `int_first_eligible_review` | one reviewed pull request | first submitted non-author review |
+| `int_production_deployments` | one production deployment | latest status plus first successful status |
+| `int_change_to_deployment` | one PR/deployment pair | exact merge or PR-commit SHA linkage |
+
+Intermediate models do not infer commit ancestry. Unmatched changes remain unmatched
+so Day 10 coverage calculations can distinguish measured values from evidence gaps.
