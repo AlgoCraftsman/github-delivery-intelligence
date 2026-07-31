@@ -27,6 +27,27 @@ models:
       +materialized: view
       +schema: intermediate
       +tags: ["intermediate"]
+    marts:
+      +materialized: view
+      +schema: marts
+      +tags: ["marts"]
+
+seeds:
+  github_analytics:
+    repository_metric_config:
+      +column_types:
+        repository_id: bigint
+        repository_full_name: text
+        default_branch: text
+        repository_timezone: text
+        production_signal: text
+        production_environment_names: text
+        production_workflow_name: text
+        incident_label: text
+        rollback_label: text
+        hotfix_label: text
+        unplanned_rework_label: text
+        definition_version: text
 
 flags:
   require_generic_test_arguments_property: true

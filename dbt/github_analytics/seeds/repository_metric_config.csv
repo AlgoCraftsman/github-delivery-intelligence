@@ -1,0 +1,4 @@
+repository_id,repository_full_name,default_branch,repository_timezone,production_signal,production_environment_names,production_workflow_name,incident_label,rollback_label,hotfix_label,unplanned_rework_label,definition_version
+1308228416,AlgoCraftsman/github-delivery-intelligence,main,America/New_York,deployment_status,production,,,,,,v1.0.0
+20001,example-org/delivery-demo,main,UTC,deployment_status,production,,,,,,v1.0.0
+20003,example-org/workflow-proxy-demo,main,UTC,workflow_run,,Release production,,,,,v1.0.0
