@@ -1,0 +1,404 @@
+version: 2
+
+models:
+  - name: int_pr_lifecycle
+    description: >
+      Latest pull-request state with webhook and backfill snapshots collapsed.
+      Grain: one repository-scoped pull request.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "resolved_at is null or resolved_at >= created_at"
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity from the latest snapshot.
+        data_tests: [not_null]
+      - name: installation_id
+        data_type: bigint
+        description: GitHub App installation identity from the latest snapshot.
+        data_tests: [not_null]
+      - name: pull_request_key
+        data_type: text
+        description: Repository-scoped pull-request identity.
+        data_tests: [not_null, unique]
+      - name: pull_request_id
+        data_type: bigint
+        description: REST database identity when observed.
+      - name: pull_request_node_id
+        data_type: text
+        description: GraphQL node identity when observed.
+      - name: pull_request_number
+        data_type: integer
+        description: Repository-scoped pull-request number.
+        data_tests: [not_null]
+      - name: pull_request_state
+        data_type: text
+        description: Resolved latest lifecycle state.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["open", "closed", "merged"]
+      - name: title
+        data_type: text
+        description: Pull-request title from the latest snapshot.
+        data_tests: [not_null]
+      - name: is_draft
+        data_type: boolean
+        description: Latest draft flag.
+        data_tests: [not_null]
+      - name: author_id
+        data_type: bigint
+        description: REST author identity when present.
+      - name: author_node_id
+        data_type: text
+        description: GraphQL author identity when present.
+      - name: author_login
+        data_type: text
+        description: Pull-request author login.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Earliest observed pull-request creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Latest observed source update time.
+      - name: closed_at
+        data_type: timestamp with time zone
+        description: Current close time for a resolved pull request.
+      - name: merged_at
+        data_type: timestamp with time zone
+        description: Merge time when the pull request merged.
+      - name: resolved_at
+        data_type: timestamp with time zone
+        description: Merge or close time; null while open.
+      - name: is_merged
+        data_type: boolean
+        description: Whether the resolved state is merged.
+        data_tests: [not_null]
+      - name: is_closed
+        data_type: boolean
+        description: Whether the pull request is closed or merged.
+        data_tests: [not_null]
+      - name: lifecycle_seconds
+        data_type: bigint
+        description: Seconds from creation to merge or close.
+      - name: base_ref_name
+        data_type: text
+        description: Latest base branch.
+      - name: head_ref_name
+        data_type: text
+        description: Latest head branch.
+      - name: merge_commit_sha
+        data_type: text
+        description: Merge commit SHA when present.
+      - name: additions
+        data_type: integer
+        description: Latest added-line count.
+      - name: deletions
+        data_type: integer
+        description: Latest deleted-line count.
+      - name: changed_files
+        data_type: integer
+        description: Latest changed-file count.
+      - name: snapshot_count
+        data_type: integer
+        description: Number of raw snapshots collapsed into this row.
+        data_tests: [not_null]
+      - name: source_count
+        data_type: integer
+        description: Number of distinct ingestion paths represented.
+        data_tests: [not_null]
+      - name: first_ingested_at
+        data_type: timestamp with time zone
+        description: Earliest warehouse landing time among snapshots.
+        data_tests: [not_null]
+      - name: last_ingested_at
+        data_type: timestamp with time zone
+        description: Latest warehouse landing time among snapshots.
+        data_tests: [not_null]
+
+  - name: int_first_eligible_review
+    description: >
+      First submitted non-author review for each pull request after duplicate
+      review snapshots are collapsed. Grain: one reviewed pull request.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "seconds_to_first_review >= 0"
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: pull_request_key
+        data_type: text
+        description: Reviewed pull-request identity.
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('int_pr_lifecycle')
+                field: pull_request_key
+      - name: pull_request_number
+        data_type: integer
+        description: Reviewed pull-request number.
+        data_tests: [not_null]
+      - name: review_key
+        data_type: text
+        description: Repository-scoped first-review identity.
+        data_tests: [not_null]
+      - name: review_id
+        data_type: bigint
+        description: REST review identity when observed.
+      - name: review_node_id
+        data_type: text
+        description: GraphQL review identity when observed.
+      - name: review_state
+        data_type: text
+        description: Resolved first-review state.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["approved", "changes_requested", "commented", "dismissed"]
+      - name: reviewer_id
+        data_type: bigint
+        description: REST reviewer identity when observed.
+      - name: reviewer_node_id
+        data_type: text
+        description: GraphQL reviewer identity when observed.
+      - name: reviewer_login
+        data_type: text
+        description: First eligible reviewer login.
+        data_tests: [not_null]
+      - name: commit_sha
+        data_type: text
+        description: Commit SHA reviewed when supplied.
+      - name: first_review_at
+        data_type: timestamp with time zone
+        description: First eligible review submission time.
+        data_tests: [not_null]
+      - name: seconds_to_first_review
+        data_type: bigint
+        description: Seconds from pull-request creation to first eligible review.
+        data_tests: [not_null]
+      - name: is_pre_merge_review
+        data_type: boolean
+        description: Whether the first review occurred no later than merge.
+        data_tests: [not_null]
+      - name: review_snapshot_count
+        data_type: integer
+        description: Raw snapshots collapsed for the selected review.
+        data_tests: [not_null]
+      - name: review_source_count
+        data_type: integer
+        description: Distinct ingestion paths represented by the selected review.
+        data_tests: [not_null]
+
+  - name: int_production_deployments
+    description: >
+      Production deployments with duplicate snapshots collapsed and status
+      history resolved. Grain: one repository-scoped production deployment.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "successful_at is null or successful_at >= created_at"
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: installation_id
+        data_type: bigint
+        description: GitHub App installation identity.
+        data_tests: [not_null]
+      - name: deployment_key
+        data_type: text
+        description: Repository-scoped deployment identity.
+        data_tests: [not_null, unique]
+      - name: deployment_id
+        data_type: bigint
+        description: GitHub deployment database identity.
+        data_tests: [not_null]
+      - name: environment
+        data_type: text
+        description: Production environment name.
+        data_tests: [not_null]
+      - name: deployment_sha
+        data_type: text
+        description: Deployed Git commit SHA.
+        data_tests: [not_null]
+      - name: git_ref
+        data_type: text
+        description: Requested deployment ref.
+      - name: deployment_task
+        data_type: text
+        description: GitHub deployment task.
+      - name: is_transient_environment
+        data_type: boolean
+        description: Whether GitHub marks the environment as transient.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Earliest observed deployment creation time.
+        data_tests: [not_null]
+      - name: updated_at
+        data_type: timestamp with time zone
+        description: Latest observed deployment update time.
+      - name: latest_deployment_status_key
+        data_type: text
+        description: Latest resolved deployment-status identity.
+      - name: latest_deployment_status_id
+        data_type: bigint
+        description: Latest resolved deployment-status database identity.
+      - name: latest_deployment_state
+        data_type: text
+        description: Latest resolved deployment state.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["error", "failure", "inactive", "in_progress", "queued", "pending", "success"]
+      - name: latest_status_at
+        data_type: timestamp with time zone
+        description: Latest deployment-status creation time.
+      - name: successful_at
+        data_type: timestamp with time zone
+        description: First observed successful status time.
+      - name: is_successful
+        data_type: boolean
+        description: Whether a successful status has been observed.
+        data_tests: [not_null]
+      - name: seconds_to_success
+        data_type: bigint
+        description: Seconds from deployment creation to first success.
+      - name: deployment_snapshot_count
+        data_type: integer
+        description: Raw deployment snapshots collapsed.
+        data_tests: [not_null]
+      - name: deployment_source_count
+        data_type: integer
+        description: Distinct deployment ingestion paths represented.
+        data_tests: [not_null]
+      - name: status_record_count
+        data_type: integer
+        description: Distinct deployment-status records observed.
+        data_tests: [not_null]
+      - name: status_snapshot_count
+        data_type: integer
+        description: Raw deployment-status snapshots collapsed.
+        data_tests: [not_null]
+      - name: first_ingested_at
+        data_type: timestamp with time zone
+        description: Earliest deployment warehouse landing time.
+        data_tests: [not_null]
+      - name: last_ingested_at
+        data_type: timestamp with time zone
+        description: Latest deployment warehouse landing time.
+        data_tests: [not_null]
+
+  - name: int_change_to_deployment
+    description: >
+      Exact-SHA linkage from a merged pull request change to a successful
+      production deployment. Grain: one pull-request/deployment pair.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "lead_time_seconds >= 0"
+    columns:
+      - name: change_deployment_key
+        data_type: text
+        description: Stable pull-request/deployment linkage identity.
+        data_tests: [not_null, unique]
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: pull_request_key
+        data_type: text
+        description: Linked pull-request identity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_pr_lifecycle')
+                field: pull_request_key
+      - name: pull_request_number
+        data_type: integer
+        description: Linked pull-request number.
+        data_tests: [not_null]
+      - name: pull_request_node_id
+        data_type: text
+        description: Linked pull-request GraphQL identity.
+      - name: deployment_key
+        data_type: text
+        description: Linked production deployment identity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_production_deployments')
+                field: deployment_key
+      - name: deployment_id
+        data_type: bigint
+        description: Linked deployment database identity.
+        data_tests: [not_null]
+      - name: environment
+        data_type: text
+        description: Linked production environment.
+        data_tests: [not_null]
+      - name: change_sha
+        data_type: text
+        description: Exact Git commit SHA used for linkage.
+        data_tests: [not_null]
+      - name: linkage_type
+        data_type: text
+        description: Evidence used to link the pull request and deployment.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["merge_commit", "pull_request_commit"]
+      - name: change_completed_at
+        data_type: timestamp with time zone
+        description: Merge or commit completion time used as the lead-time start.
+        data_tests: [not_null]
+      - name: deployed_at
+        data_type: timestamp with time zone
+        description: First successful production deployment time.
+        data_tests: [not_null]
+      - name: lead_time_seconds
+        data_type: bigint
+        description: Seconds from change completion to successful deployment.
+        data_tests: [not_null]
