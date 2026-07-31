@@ -92,6 +92,60 @@ expected(model_name, record_key, outcome) as (
               "linkage_type": "merge_commit",
               "lead_time_seconds": 93900
             }'::jsonb
+        ),
+        (
+            'int_pr_lifecycle',
+            '20001:18',
+            '{
+              "state": "merged",
+              "is_merged": true,
+              "lifecycle_seconds": 180000,
+              "snapshot_count": 1,
+              "source_count": 1
+            }'::jsonb
+        ),
+        (
+            'int_pr_lifecycle',
+            '20002:1',
+            '{
+              "state": "merged",
+              "is_merged": true,
+              "lifecycle_seconds": 165600,
+              "snapshot_count": 1,
+              "source_count": 1
+            }'::jsonb
+        ),
+        (
+            'int_production_deployments',
+            '20002:71001',
+            '{
+              "latest_state": "success",
+              "is_successful": true,
+              "seconds_to_success": 600,
+              "deployment_snapshot_count": 1,
+              "deployment_source_count": 1,
+              "status_record_count": 1,
+              "status_snapshot_count": 1
+            }'::jsonb
+        ),
+        (
+            'int_change_to_deployment',
+            '20002:1->20002:71001',
+            '{
+              "linkage_type": "merge_commit",
+              "lead_time_seconds": 105000
+            }'::jsonb
+        ),
+        (
+            'int_pr_lifecycle',
+            '20003:1',
+            '{
+              "state": "merged",
+              "is_merged": true,
+              "lifecycle_seconds": 165600,
+              "snapshot_count": 1,
+              "source_count": 1
+            }'::jsonb
         )
 ),
 mismatches as (

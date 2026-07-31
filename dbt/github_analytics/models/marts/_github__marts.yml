@@ -1,0 +1,414 @@
+version: 2
+
+models:
+  - name: dim_repository
+    description: >
+      Observed and configured GitHub repositories with metric evidence rules.
+      Grain: one GitHub repository database identity.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null, unique]
+      - name: repository_full_name
+        data_type: text
+        description: Canonical owner/name identity, preferring checked-in configuration.
+        data_tests: [not_null]
+      - name: installation_id
+        data_type: bigint
+        description: Latest observed GitHub App installation identity.
+      - name: default_branch
+        data_type: text
+        description: Configured default branch; null for unconfigured repositories.
+      - name: repository_timezone
+        data_type: text
+        description: Configured IANA reporting timezone.
+      - name: production_signal
+        data_type: text
+        description: Sole primary production evidence type.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["deployment_status", "workflow_run"]
+      - name: production_environment_names
+        data_type: text
+        description: Pipe-delimited exact deployment environment names.
+      - name: production_workflow_name
+        data_type: text
+        description: Exact workflow name used as configured production proxy.
+      - name: incident_label
+        data_type: text
+        description: Optional incident convention.
+      - name: rollback_label
+        data_type: text
+        description: Optional rollback convention.
+      - name: hotfix_label
+        data_type: text
+        description: Optional hotfix convention.
+      - name: unplanned_rework_label
+        data_type: text
+        description: Optional unplanned rework convention.
+      - name: definition_version
+        data_type: text
+        description: Checked-in repository metric definition version.
+      - name: is_metric_configured
+        data_type: boolean
+        description: Whether a repository configuration row exists.
+        data_tests: [not_null]
+
+  - name: dim_date
+    description: >
+      Contiguous calendar dates bounded by observed analytics events. Grain: one
+      calendar date. The observed bounds keep fixture builds deterministic.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        data_type: integer
+        description: YYYYMMDD integer date identity.
+        data_tests: [not_null, unique]
+      - name: date_day
+        data_type: date
+        description: Calendar date.
+        data_tests: [not_null, unique]
+      - name: iso_year
+        data_type: integer
+        description: ISO week-numbering year.
+        data_tests: [not_null]
+      - name: calendar_quarter
+        data_type: integer
+        description: Calendar quarter number.
+        data_tests: [not_null]
+      - name: calendar_month
+        data_type: integer
+        description: Calendar month number.
+        data_tests: [not_null]
+      - name: iso_week
+        data_type: integer
+        description: ISO week number.
+        data_tests: [not_null]
+      - name: iso_day_of_week
+        data_type: integer
+        description: ISO weekday from one through seven.
+        data_tests: [not_null]
+      - name: month_name
+        data_type: text
+        description: English calendar month name.
+        data_tests: [not_null]
+      - name: day_name
+        data_type: text
+        description: English weekday name.
+        data_tests: [not_null]
+      - name: is_weekend
+        data_type: boolean
+        description: Whether the date is Saturday or Sunday.
+        data_tests: [not_null]
+
+  - name: fct_deployments
+    description: >
+      Production-deployment candidates classified against repository evidence
+      configuration. Deployment statuses are measured signals; exact configured
+      workflows are proxies. Grain: one deployment or configured workflow run.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "successful_at is null or successful_at >= created_at"
+      - expression_is_true:
+          arguments:
+            expression: "seconds_to_success is null or seconds_to_success >= 0"
+    columns:
+      - name: deployment_key
+        data_type: text
+        description: Repository-scoped deployment or workflow-run identity.
+        data_tests: [not_null, unique]
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_repository')
+                field: repository_id
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: evidence_type
+        data_type: text
+        description: GitHub evidence family represented by the row.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["deployment_status", "workflow_run"]
+      - name: deployment_id
+        data_type: bigint
+        description: GitHub deployment identity for deployment-status evidence.
+      - name: workflow_run_id
+        data_type: bigint
+        description: GitHub workflow-run identity for proxy evidence.
+      - name: environment
+        data_type: text
+        description: Deployment environment when applicable.
+      - name: workflow_name
+        data_type: text
+        description: Workflow name when applicable.
+      - name: deployment_sha
+        data_type: text
+        description: Exact deployed or workflow head commit SHA.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Evidence creation time.
+        data_tests: [not_null]
+      - name: successful_at
+        data_type: timestamp with time zone
+        description: First valid success time.
+      - name: latest_state
+        data_type: text
+        description: Latest deployment state or workflow conclusion.
+      - name: is_successful
+        data_type: boolean
+        description: Whether success evidence was observed.
+        data_tests: [not_null]
+      - name: seconds_to_success
+        data_type: bigint
+        description: Non-negative seconds from creation to success.
+      - name: snapshot_count
+        data_type: integer
+        description: Duplicate raw snapshots collapsed for the evidence record.
+        data_tests: [not_null]
+      - name: source_count
+        data_type: integer
+        description: Distinct ingestion paths represented.
+        data_tests: [not_null]
+      - name: is_primary_evidence
+        data_type: boolean
+        description: Whether the row matches the repository's primary signal convention.
+        data_tests: [not_null]
+      - &measurement_status
+        name: measurement_status
+        data_type: text
+        description: Evidence-aware result status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["measured", "configured_proxy", "unavailable"]
+      - &definition_version
+        name: definition_version
+        data_type: text
+        description: Checked-in metric definition version.
+        data_tests: [not_null]
+      - &exclusion_reason
+        name: exclusion_reason
+        data_type: text
+        description: Machine-readable reason the result is unavailable.
+
+  - name: fct_pull_requests
+    description: >
+      Pull-request lifecycle, review, and first exact-SHA production linkage.
+      Grain: one repository-scoped pull request.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "lead_time_seconds is null or lead_time_seconds >= 0"
+      - expression_is_true:
+          arguments:
+            expression: >-
+              seconds_from_first_review_to_merge is null
+              or seconds_from_first_review_to_merge >= 0
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: pull_request_key
+        data_type: text
+        description: Repository-scoped pull-request identity.
+        data_tests: [not_null, unique]
+      - name: pull_request_number
+        data_type: integer
+        description: Repository-scoped pull-request number.
+        data_tests: [not_null]
+      - name: pull_request_state
+        data_type: text
+        description: Resolved pull-request state.
+        data_tests: [not_null]
+      - name: title
+        data_type: text
+        description: Pull-request title.
+        data_tests: [not_null]
+      - name: is_draft
+        data_type: boolean
+        description: Whether the pull request is a draft.
+        data_tests: [not_null]
+      - name: created_at
+        data_type: timestamp with time zone
+        description: Pull-request creation time.
+        data_tests: [not_null]
+      - name: first_review_at
+        data_type: timestamp with time zone
+        description: First eligible non-author review time.
+      - name: closed_at
+        data_type: timestamp with time zone
+        description: Close time when applicable.
+      - name: merged_at
+        data_type: timestamp with time zone
+        description: Merge time when applicable.
+      - name: resolved_at
+        data_type: timestamp with time zone
+        description: Merge or close time.
+      - name: lifecycle_seconds
+        data_type: bigint
+        description: Seconds from creation to resolution.
+      - name: seconds_to_first_review
+        data_type: bigint
+        description: Seconds from creation to first eligible review.
+      - name: seconds_from_first_review_to_merge
+        data_type: bigint
+        description: Seconds from first eligible review to merge.
+      - name: additions
+        data_type: integer
+        description: Latest added-line count.
+      - name: deletions
+        data_type: integer
+        description: Latest deleted-line count.
+      - name: changed_files
+        data_type: integer
+        description: Latest changed-file count.
+      - name: snapshot_count
+        data_type: integer
+        description: Raw pull-request snapshots collapsed.
+        data_tests: [not_null]
+      - name: source_count
+        data_type: integer
+        description: Distinct ingestion paths represented.
+        data_tests: [not_null]
+      - name: is_eligible_change
+        data_type: boolean
+        description: Whether merge evidence is temporally valid for linkage coverage.
+        data_tests: [not_null]
+      - name: deployment_key
+        data_type: text
+        description: First linked production evidence identity.
+      - name: linkage_type
+        data_type: text
+        description: Exact-SHA change evidence used for linkage.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["merge_commit", "pull_request_commit"]
+      - name: deployment_evidence_type
+        data_type: text
+        description: Primary production evidence type receiving the change.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["deployment_status", "workflow_run"]
+      - name: deployed_at
+        data_type: timestamp with time zone
+        description: First linked production success time.
+      - name: lead_time_seconds
+        data_type: bigint
+        description: Seconds from merge to first linked production success.
+      - name: is_change_linked
+        data_type: boolean
+        description: Whether exact-SHA production linkage exists.
+        data_tests: [not_null]
+      - *measurement_status
+      - *definition_version
+      - *exclusion_reason
+
+  - name: fct_delivery_performance_daily
+    description: >
+      Evidence-aware daily delivery metrics. Grain: one repository, local
+      calendar date, and metric. Empty dates are retained by the date spine.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "coverage_ratio is null or coverage_ratio between 0 and 1"
+      - expression_is_true:
+          arguments:
+            expression: "coverage_numerator <= coverage_denominator"
+      - expression_is_true:
+          arguments:
+            expression: "measurement_status != 'unavailable' or metric_value is null"
+    columns:
+      - name: delivery_performance_daily_key
+        data_type: text
+        description: Stable repository/date/metric identity.
+        data_tests: [not_null, unique]
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null]
+      - name: repository_full_name
+        data_type: text
+        description: GitHub owner/name repository identity.
+        data_tests: [not_null]
+      - name: date_key
+        data_type: integer
+        description: Reporting date identity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: date_day
+        data_type: date
+        description: Repository-local reporting date.
+        data_tests: [not_null]
+      - name: metric_name
+        data_type: text
+        description: Delivery metric definition.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - deployment_frequency
+                  - change_lead_time
+                  - failed_deployment_recovery_time
+                  - change_failure_rate
+                  - deployment_rework_rate
+      - name: metric_unit
+        data_type: text
+        description: Unit of metric_value.
+        data_tests: [not_null]
+      - name: metric_value
+        data_type: numeric(20,6)
+        description: Metric result when measured or configured as a proxy.
+      - name: coverage_numerator
+        data_type: bigint
+        description: Eligible evidence records successfully classified or linked.
+        data_tests: [not_null]
+      - name: coverage_denominator
+        data_type: bigint
+        description: Eligible evidence records considered.
+        data_tests: [not_null]
+      - name: coverage_ratio
+        data_type: numeric(12,6)
+        description: Coverage numerator divided by denominator; null for an empty denominator.
+      - *measurement_status
+      - *definition_version
+      - *exclusion_reason

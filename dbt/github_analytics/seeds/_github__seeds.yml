@@ -1,0 +1,67 @@
+version: 2
+
+seeds:
+  - name: repository_metric_config
+    description: >
+      Repository-scoped evidence rules for delivery metrics. Exactly one primary
+      production signal is selected per repository; optional instability labels
+      do not make a metric measurable until a model implements the full evidence
+      relationship. Grain: one GitHub repository database identity.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (production_signal = 'deployment_status'
+                and production_environment_names is not null
+                and production_workflow_name is null)
+              or
+              (production_signal = 'workflow_run'
+                and production_workflow_name is not null
+                and production_environment_names is null)
+    columns:
+      - name: repository_id
+        data_type: bigint
+        description: GitHub repository database identity.
+        data_tests: [not_null, unique]
+      - name: repository_full_name
+        data_type: text
+        description: Canonical owner/name repository identity.
+        data_tests: [not_null, unique]
+      - name: default_branch
+        data_type: text
+        description: Repository default branch used by evidence conventions.
+        data_tests: [not_null]
+      - name: repository_timezone
+        data_type: text
+        description: IANA timezone for repository-local reporting dates.
+        data_tests: [not_null]
+      - name: production_signal
+        data_type: text
+        description: The repository's sole primary production evidence type.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["deployment_status", "workflow_run"]
+      - name: production_environment_names
+        data_type: text
+        description: Pipe-delimited exact production environment names for deployment evidence.
+      - name: production_workflow_name
+        data_type: text
+        description: Exact successful workflow name when workflow evidence is the configured proxy.
+      - name: incident_label
+        data_type: text
+        description: Optional issue label convention for incident evidence.
+      - name: rollback_label
+        data_type: text
+        description: Optional convention for rollback evidence.
+      - name: hotfix_label
+        data_type: text
+        description: Optional convention for hotfix evidence.
+      - name: unplanned_rework_label
+        data_type: text
+        description: Optional convention for unplanned deployment rework evidence.
+      - name: definition_version
+        data_type: text
+        description: Checked-in version of the repository metric definition.
+        data_tests: [not_null]

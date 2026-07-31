@@ -16,12 +16,12 @@ with actual as (
 ),
 expected(resource, row_count) as (
     values
-        ('pull_requests', 2::bigint),
+        ('pull_requests', 5::bigint),
         ('reviews', 2::bigint),
         ('pull_request_commits', 1::bigint),
-        ('workflow_runs', 2::bigint),
-        ('deployments', 2::bigint),
-        ('deployment_statuses', 2::bigint)
+        ('workflow_runs', 3::bigint),
+        ('deployments', 3::bigint),
+        ('deployment_statuses', 3::bigint)
 )
 select
     expected.resource,
