@@ -1,5 +1,5 @@
--- Grain: one repository and repository-local merge date.
--- Visualization: combo/line chart for p50 and p90, with coverage in the tooltip.
+-- Grain: one repository, repository-local merge date, and percentile.
+-- Visualization: line chart split by series_name, with coverage in the tooltip.
 -- Filters: repository_full_name and date_day.
 -- Assumption: percentiles are calculated from linked PR rows, not the daily average mart value.
 with eligible_changes as (
@@ -29,8 +29,11 @@ daily_percentiles as (
 select
     metrics.repository_full_name,
     metrics.date_day,
-    round((percentiles.p50_lead_time_seconds / 3600.0)::numeric, 2) as p50_lead_time_hours,
-    round((percentiles.p90_lead_time_seconds / 3600.0)::numeric, 2) as p90_lead_time_hours,
+    values_by_percentile.percentile_name,
+    metrics.repository_full_name || ' · ' || upper(values_by_percentile.percentile_name)
+        as series_name,
+    round((values_by_percentile.lead_time_seconds / 3600.0)::numeric, 2)
+        as lead_time_hours,
     coalesce(percentiles.linked_change_count, 0) as linked_change_count,
     metrics.measurement_status,
     metrics.coverage_numerator,
@@ -42,5 +45,10 @@ from analytics_marts.fct_delivery_performance_daily as metrics
 left join daily_percentiles as percentiles
     on metrics.repository_id = percentiles.repository_id
     and metrics.date_day = percentiles.date_day
+cross join lateral (
+    values
+        ('p50'::text, percentiles.p50_lead_time_seconds),
+        ('p90'::text, percentiles.p90_lead_time_seconds)
+) as values_by_percentile(percentile_name, lead_time_seconds)
 where metrics.metric_name = 'change_lead_time'
-order by metrics.repository_full_name, metrics.date_day;
+order by metrics.repository_full_name, metrics.date_day, values_by_percentile.percentile_name;

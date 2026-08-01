@@ -1,10 +1,10 @@
 {
   "delivery_performance_change_lead_time.sql": {
     "minimum_rows": 1,
-    "grain_columns": ["repository_full_name", "date_day"],
-    "required_columns": ["p50_lead_time_hours", "p90_lead_time_hours", "measurement_status", "coverage_ratio"],
+    "grain_columns": ["repository_full_name", "date_day", "percentile_name"],
+    "required_columns": ["series_name", "lead_time_hours", "measurement_status", "coverage_ratio"],
     "required_values": {"measurement_status": ["measured", "configured_proxy", "unavailable"]},
-    "fixture_sha256": "8fc36fcb9aba58c9dbaeb33796477f3eb3dcda35e1515a7cc3d4b70b38a822c3"
+    "fixture_sha256": "5d320373b0ce222b46669bc5a27616270571dd53c2bb851171c3929cef4f6e5d"
   },
   "delivery_performance_deployment_frequency.sql": {
     "minimum_rows": 1,
