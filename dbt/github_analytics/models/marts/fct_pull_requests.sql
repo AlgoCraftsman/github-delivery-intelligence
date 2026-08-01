@@ -84,6 +84,8 @@ select
     pull_requests.resolved_at,
     pull_requests.lifecycle_seconds,
     reviews.seconds_to_first_review,
+    coalesce(reviews.eligible_review_count, 0)::integer as eligible_review_count,
+    coalesce(reviews.review_rework_cycle_count, 0)::integer as review_rework_cycle_count,
     case
         when reviews.first_review_at is not null and pull_requests.merged_at >= reviews.first_review_at
             then extract(epoch from (pull_requests.merged_at - reviews.first_review_at))::bigint

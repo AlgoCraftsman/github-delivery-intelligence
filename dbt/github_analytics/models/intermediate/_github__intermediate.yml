@@ -212,6 +212,16 @@ models:
         data_type: integer
         description: Distinct ingestion paths represented by the selected review.
         data_tests: [not_null]
+      - name: eligible_review_count
+        data_type: integer
+        description: Distinct resolved eligible non-author reviews for the pull request.
+        data_tests: [not_null]
+      - name: review_rework_cycle_count
+        data_type: integer
+        description: >
+          Distinct reviewed commit SHAs with a latest changes-requested review. When
+          GitHub does not supply a commit SHA, the resolved review identity is used.
+        data_tests: [not_null]
 
   - name: int_production_deployments
     description: >

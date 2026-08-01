@@ -33,8 +33,13 @@ unpaired as (
 ),
 missing_review_parent as (
     select 'review_parent' as resource, review_key as resource_key
-    from {{ ref('stg_github__reviews') }}
-    where pull_request_node_id != 'PR_NODE_17'
+    from {{ ref('stg_github__reviews') }} as reviews
+    where not exists (
+        select 1
+        from {{ ref('stg_github__pull_requests') }} as pull_requests
+        where pull_requests.repository_id = reviews.repository_id
+          and pull_requests.pull_request_node_id = reviews.pull_request_node_id
+    )
 ),
 incorrect_commit as (
     select 'pull_request_commit' as resource, pull_request_commit_key as resource_key

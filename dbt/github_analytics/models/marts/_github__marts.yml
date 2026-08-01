@@ -229,6 +229,9 @@ models:
             expression: >-
               seconds_from_first_review_to_merge is null
               or seconds_from_first_review_to_merge >= 0
+      - expression_is_true:
+          arguments:
+            expression: "review_rework_cycle_count >= 0"
     columns:
       - name: repository_id
         data_type: bigint
@@ -280,6 +283,16 @@ models:
       - name: seconds_to_first_review
         data_type: bigint
         description: Seconds from creation to first eligible review.
+      - name: eligible_review_count
+        data_type: integer
+        description: Number of resolved eligible non-author reviews.
+        data_tests: [not_null]
+      - name: review_rework_cycle_count
+        data_type: integer
+        description: >
+          Distinct reviewed commit SHAs with a latest changes-requested review;
+          falls back to review identity when the commit SHA is absent.
+        data_tests: [not_null]
       - name: seconds_from_first_review_to_merge
         data_type: bigint
         description: Seconds from first eligible review to merge.

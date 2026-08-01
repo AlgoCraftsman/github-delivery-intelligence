@@ -1,0 +1,53 @@
+{
+  "delivery_performance_change_lead_time.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "date_day"],
+    "required_columns": ["p50_lead_time_hours", "p90_lead_time_hours", "measurement_status", "coverage_ratio"],
+    "required_values": {"measurement_status": ["measured", "configured_proxy", "unavailable"]},
+    "fixture_sha256": "8fc36fcb9aba58c9dbaeb33796477f3eb3dcda35e1515a7cc3d4b70b38a822c3"
+  },
+  "delivery_performance_deployment_frequency.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "date_day"],
+    "required_columns": ["deployments", "measurement_status", "coverage_ratio", "exclusion_reason"],
+    "required_values": {"measurement_status": ["measured", "configured_proxy", "unavailable"]},
+    "fixture_sha256": "3771e7835095422cd5bc056b189a2af0c9fdb21220a25beb16c9e6de0a669225"
+  },
+  "delivery_performance_metric_status.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "date_day", "metric_name"],
+    "required_columns": ["metric_value", "measurement_status", "coverage_ratio", "exclusion_reason", "status_label"],
+    "required_values": {"measurement_status": ["measured", "configured_proxy", "unavailable"]},
+    "fixture_sha256": "83cb03db71a6ef4542d7344b5f1b3fb863ff1401a6d17f05a87c09c88f99b73f"
+  },
+  "pr_flow_cycle_time.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "date_day", "size_band"],
+    "required_columns": ["p50_cycle_time_hours", "p90_cycle_time_hours", "merged_pr_count"],
+    "fixture_sha256": "742b3765282d8316b8b6e4470f4528301c64d6c66dbc088f353b0ff6b45771f2"
+  },
+  "pr_flow_open_aging.sql": {
+    "minimum_rows": 3,
+    "grain_columns": ["repository_full_name", "pull_request_number"],
+    "required_columns": ["as_of", "age_hours", "aging_bucket", "repository_wip"],
+    "fixture_sha256": "065d064e233f1cac38d28358a47b310893195d7aad8898a7e1c37dbcd3cb9101"
+  },
+  "pr_flow_review_latency_distribution.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "latency_bucket"],
+    "required_columns": ["pull_request_count"],
+    "fixture_sha256": "7f65b6f7db3b125f186e1ad32791247f68979f72a667ae05de4a81141201ea15"
+  },
+  "pr_flow_review_latency_trend.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "date_day"],
+    "required_columns": ["p50_review_latency_hours", "p90_review_latency_hours", "review_coverage_ratio"],
+    "fixture_sha256": "ee0e8911fc8180077aedd3b342c3bb570c699a26bae464a05b00a0933e8f1308"
+  },
+  "pr_flow_review_rework.sql": {
+    "minimum_rows": 1,
+    "grain_columns": ["repository_full_name", "review_rework_cycle_count"],
+    "required_columns": ["pull_request_count", "repository_share"],
+    "fixture_sha256": "2975c663a1f238d15393e8536ce734721950d2c61fc2b8ad8a895bd8c4112a82"
+  }
+}
