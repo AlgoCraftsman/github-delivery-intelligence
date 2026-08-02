@@ -16,8 +16,8 @@ with actual as (
 ),
 expected(resource, row_count) as (
     values
-        ('pull_requests', 5::bigint),
-        ('reviews', 2::bigint),
+        ('pull_requests', 12::bigint),
+        ('reviews', 10::bigint),
         ('pull_request_commits', 1::bigint),
         ('workflow_runs', 3::bigint),
         ('deployments', 3::bigint),

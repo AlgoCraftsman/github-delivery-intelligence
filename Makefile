@@ -2,7 +2,7 @@ UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build airflow-image airflow-dag-check
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check airflow-image airflow-dag-check
 
 install:
 	$(UV) sync --frozen
@@ -76,6 +76,26 @@ migrate:
 		--dbname "$${POSTGRES_DB:-github_analytics}" \
 		--set ON_ERROR_STOP=1 \
 		--command "\i /docker-entrypoint-initdb.d/004_create_backfill_checkpoints.sql"
+	docker compose -f $(COMPOSE_FILE) exec -T postgres \
+		psql --username "$${POSTGRES_USER:-github_analytics}" \
+		--dbname "$${POSTGRES_DB:-github_analytics}" \
+		--set ON_ERROR_STOP=1 \
+		--command "\i /docker-entrypoint-initdb.d/005_create_metabase_reader.sql"
+
+metabase-access:
+	docker compose -f $(COMPOSE_FILE) exec -T postgres \
+		psql --username "$${POSTGRES_USER:-github_analytics}" \
+		--dbname "$${POSTGRES_DB:-github_analytics}" \
+		--set ON_ERROR_STOP=1 \
+		--command "\i /docker-entrypoint-initdb.d/005_create_metabase_reader.sql"
+
+dashboard-up:
+	docker compose -f $(COMPOSE_FILE) up -d --wait postgres
+	$(MAKE) metabase-access
+	docker compose -f $(COMPOSE_FILE) --profile dashboards up -d --wait metabase
+
+dashboard-down:
+	docker compose -f $(COMPOSE_FILE) --profile dashboards stop metabase
 
 webhook:
 	$(UV) run uvicorn github_analytics.webhook:create_runtime_app --factory --env-file .env
@@ -110,6 +130,9 @@ dbt-build:
 	$(UV) run dbt build \
 		--project-dir dbt/github_analytics \
 		--profiles-dir dbt/github_analytics
+
+dashboard-sql-check:
+	$(UV) run python tools/validate_dashboard_sql.py
 
 airflow-image:
 	docker build \

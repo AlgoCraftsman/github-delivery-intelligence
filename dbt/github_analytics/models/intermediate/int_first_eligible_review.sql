@@ -70,24 +70,38 @@ eligible_reviews as (
     where reviews.review_state != 'pending'
       and lower(reviews.reviewer_login) != lower(pull_requests.author_login)
       and reviews.submitted_at >= pull_requests.created_at
+),
+review_rollup as (
+    select
+        pull_request_key,
+        count(*)::integer as eligible_review_count,
+        count(
+            distinct coalesce(commit_sha, review_key)
+        ) filter (where review_state = 'changes_requested')::integer
+            as review_rework_cycle_count
+    from eligible_reviews
+    group by pull_request_key
 )
 select
-    repository_id,
-    repository_full_name,
-    pull_request_key,
-    pull_request_number,
-    review_key,
-    review_id,
-    review_node_id,
-    review_state,
-    reviewer_id,
-    reviewer_node_id,
-    reviewer_login,
-    commit_sha,
-    submitted_at as first_review_at,
-    seconds_to_first_review,
-    is_pre_merge_review,
-    snapshot_count as review_snapshot_count,
-    source_count as review_source_count
-from eligible_reviews
-where review_rank = 1
+    reviews.repository_id,
+    reviews.repository_full_name,
+    reviews.pull_request_key,
+    reviews.pull_request_number,
+    reviews.review_key,
+    reviews.review_id,
+    reviews.review_node_id,
+    reviews.review_state,
+    reviews.reviewer_id,
+    reviews.reviewer_node_id,
+    reviews.reviewer_login,
+    reviews.commit_sha,
+    reviews.submitted_at as first_review_at,
+    reviews.seconds_to_first_review,
+    reviews.is_pre_merge_review,
+    reviews.snapshot_count as review_snapshot_count,
+    reviews.source_count as review_source_count,
+    rollup.eligible_review_count,
+    rollup.review_rework_cycle_count
+from eligible_reviews as reviews
+inner join review_rollup as rollup using (pull_request_key)
+where reviews.review_rank = 1

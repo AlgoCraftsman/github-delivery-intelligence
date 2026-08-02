@@ -12,6 +12,7 @@ with actual as (
             'source_count', source_count
         ) as outcome
     from {{ ref('int_pr_lifecycle') }}
+    where repository_id != 20004
     union all
     select
         'int_first_eligible_review',
@@ -24,6 +25,7 @@ with actual as (
             'review_source_count', review_source_count
         )
     from {{ ref('int_first_eligible_review') }}
+    where repository_id != 20004
     union all
     select
         'int_production_deployments',

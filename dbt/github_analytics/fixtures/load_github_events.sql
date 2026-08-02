@@ -597,6 +597,414 @@ VALUES
     }$json$::jsonb,
     NULL,
     NULL
+),
+(
+    '00000000-0000-0000-0000-000000000018',
+    'backfill',
+    'fixture-pr-flow-101',
+    NULL,
+    'pull_request',
+    'merged',
+    20004,
+    10004,
+    '2026-01-10T12:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_101", "number": 101, "state": "MERGED",
+        "title": "Document the fixture contract", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-10T08:00:00Z", "updatedAt": "2026-01-10T12:00:00Z",
+        "closedAt": "2026-01-10T12:00:00Z", "mergedAt": "2026-01-10T12:00:00Z",
+        "baseRefName": "main", "headRefName": "docs/fixture-contract",
+        "mergeCommit": {"id": "COMMIT_FLOW_101", "oid": "1010101010101010101010101010101010101010"},
+        "additions": 10, "deletions": 2, "changedFiles": 1
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000019',
+    'backfill',
+    'fixture-pr-flow-102',
+    NULL,
+    'pull_request',
+    'merged',
+    20004,
+    10004,
+    '2026-01-11T12:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_102", "number": 102, "state": "MERGED",
+        "title": "Add a bounded retry policy", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-10T09:00:00Z", "updatedAt": "2026-01-11T12:00:00Z",
+        "closedAt": "2026-01-11T12:00:00Z", "mergedAt": "2026-01-11T12:00:00Z",
+        "baseRefName": "main", "headRefName": "feature/retry-policy",
+        "mergeCommit": {"id": "COMMIT_FLOW_102", "oid": "1020102010201020102010201020102010201020"},
+        "additions": 80, "deletions": 20, "changedFiles": 4
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000020',
+    'backfill',
+    'fixture-pr-flow-103',
+    NULL,
+    'pull_request',
+    'merged',
+    20004,
+    10004,
+    '2026-01-13T05:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_103", "number": 103, "state": "MERGED",
+        "title": "Refactor projection checkpoints", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-10T05:00:00Z", "updatedAt": "2026-01-13T05:00:00Z",
+        "closedAt": "2026-01-13T05:00:00Z", "mergedAt": "2026-01-13T05:00:00Z",
+        "baseRefName": "main", "headRefName": "feature/checkpoint-refactor",
+        "mergeCommit": {"id": "COMMIT_FLOW_103", "oid": "1030103010301030103010301030103010301030"},
+        "additions": 280, "deletions": 70, "changedFiles": 10
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000021',
+    'backfill',
+    'fixture-pr-flow-104',
+    NULL,
+    'pull_request',
+    'merged',
+    20004,
+    10004,
+    '2026-01-13T12:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_104", "number": 104, "state": "MERGED",
+        "title": "Split the ingestion service", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-10T00:00:00Z", "updatedAt": "2026-01-13T12:00:00Z",
+        "closedAt": "2026-01-13T12:00:00Z", "mergedAt": "2026-01-13T12:00:00Z",
+        "baseRefName": "main", "headRefName": "feature/ingestion-split",
+        "mergeCommit": {"id": "COMMIT_FLOW_104", "oid": "1040104010401040104010401040104010401040"},
+        "additions": 700, "deletions": 200, "changedFiles": 20
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000022',
+    'backfill',
+    'fixture-pr-flow-105',
+    NULL,
+    'pull_request',
+    'opened',
+    20004,
+    10004,
+    '2026-01-10T06:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_105", "number": 105, "state": "OPEN",
+        "title": "Harden offset recovery", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-10T06:00:00Z", "updatedAt": "2026-01-11T06:00:00Z",
+        "closedAt": null, "mergedAt": null,
+        "baseRefName": "main", "headRefName": "feature/offset-recovery",
+        "mergeCommit": null, "additions": 140, "deletions": 30, "changedFiles": 6
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000023',
+    'backfill',
+    'fixture-pr-flow-106',
+    NULL,
+    'pull_request',
+    'opened',
+    20004,
+    10004,
+    '2026-01-11T12:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_106", "number": 106, "state": "OPEN",
+        "title": "Expose consumer lag metrics", "isDraft": false,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-11T12:00:00Z", "updatedAt": "2026-01-11T12:00:00Z",
+        "closedAt": null, "mergedAt": null,
+        "baseRefName": "main", "headRefName": "feature/lag-metrics",
+        "mergeCommit": null, "additions": 45, "deletions": 10, "changedFiles": 3
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000024',
+    'backfill',
+    'fixture-pr-flow-107',
+    NULL,
+    'pull_request',
+    'opened',
+    20004,
+    10004,
+    '2026-01-12T12:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request": {
+        "id": "PR_NODE_FLOW_107", "number": 107, "state": "OPEN",
+        "title": "Sketch the alert routing API", "isDraft": true,
+        "author": {"id": "USER_NODE_FLOW_AUTHOR", "login": "flow-author"},
+        "createdAt": "2026-01-12T12:00:00Z", "updatedAt": "2026-01-12T12:00:00Z",
+        "closedAt": null, "mergedAt": null,
+        "baseRefName": "main", "headRefName": "draft/alert-routing",
+        "mergeCommit": null, "additions": 25, "deletions": 5, "changedFiles": 2
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000025',
+    'backfill',
+    'fixture-review-flow-101-approved',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-10T10:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_101",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_101_A", "state": "APPROVED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_101_REV_A"},
+        "submittedAt": "2026-01-10T10:00:00Z", "updatedAt": "2026-01-10T10:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000026',
+    'backfill',
+    'fixture-review-flow-102-changes',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-10T18:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_102",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_102_A", "state": "CHANGES_REQUESTED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_102_REV_A"},
+        "submittedAt": "2026-01-10T18:00:00Z", "updatedAt": "2026-01-10T18:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000027',
+    'backfill',
+    'fixture-review-flow-102-approved',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-11T06:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_102",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_102_B", "state": "APPROVED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_102_REV_B"},
+        "submittedAt": "2026-01-11T06:00:00Z", "updatedAt": "2026-01-11T06:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000028',
+    'backfill',
+    'fixture-review-flow-103-changes-a',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-11T05:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_103",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_103_A", "state": "CHANGES_REQUESTED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_103_REV_A"},
+        "submittedAt": "2026-01-11T05:00:00Z", "updatedAt": "2026-01-11T05:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000029',
+    'backfill',
+    'fixture-review-flow-103-changes-b',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-12T05:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_103",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_103_B", "state": "CHANGES_REQUESTED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_103_REV_B"},
+        "submittedAt": "2026-01-12T05:00:00Z", "updatedAt": "2026-01-12T05:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000030',
+    'backfill',
+    'fixture-review-flow-103-approved',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-12T17:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_103",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_103_C", "state": "APPROVED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_103_REV_C"},
+        "submittedAt": "2026-01-12T17:00:00Z", "updatedAt": "2026-01-12T17:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000031',
+    'backfill',
+    'fixture-review-flow-104-approved',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-12T00:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_104",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_104_A", "state": "APPROVED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_104_REV_A"},
+        "submittedAt": "2026-01-12T00:00:00Z", "updatedAt": "2026-01-12T00:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
+),
+(
+    '00000000-0000-0000-0000-000000000032',
+    'backfill',
+    'fixture-review-flow-105-changes',
+    NULL,
+    'pull_request_review',
+    'submitted',
+    20004,
+    10004,
+    '2026-01-11T06:00:00Z',
+    NULL,
+    statement_timestamp() - interval '2 minutes',
+    $json${
+      "resource": "pull_request_review",
+      "repository": {"id": 20004, "full_name": "example-org/pr-flow-demo"},
+      "pull_request_id": "PR_NODE_FLOW_105",
+      "pull_request_review": {
+        "id": "REVIEW_NODE_FLOW_105_A", "state": "CHANGES_REQUESTED",
+        "author": {"id": "USER_NODE_FLOW_REVIEWER", "login": "flow-reviewer"},
+        "commit": {"oid": "FLOW_105_REV_A"},
+        "submittedAt": "2026-01-11T06:00:00Z", "updatedAt": "2026-01-11T06:00:00Z"
+      }
+    }$json$::jsonb,
+    NULL,
+    NULL
 );
 
 COMMIT;

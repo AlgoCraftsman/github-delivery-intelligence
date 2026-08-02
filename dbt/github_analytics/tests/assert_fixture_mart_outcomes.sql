@@ -24,6 +24,7 @@ with actual as (
             'exclusion_reason', exclusion_reason
         )
     from {{ ref('fct_pull_requests') }}
+    where repository_id != 20004
 
     union all
 

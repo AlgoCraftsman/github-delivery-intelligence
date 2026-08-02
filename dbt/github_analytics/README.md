@@ -43,9 +43,8 @@ before bypassing that signal.
 ## Run deterministic fixture validation
 
 Use a disposable PostgreSQL database. The loader creates and transactionally reloads
-only `raw.github_events_fixture`, inserts seventeen synthetic rows, and gives them a
-current warehouse load watermark. It never truncates or mutates
-`raw.github_events`.
+only `raw.github_events_fixture`, inserts 32 synthetic rows, and gives them a current
+warehouse load watermark. It never truncates or mutates `raw.github_events`.
 
 ```bash
 psql --set ON_ERROR_STOP=1 \
@@ -62,10 +61,10 @@ uv run dbt build \
   --vars '{"github_events_identifier": "github_events_fixture", "fixture_validation": true}'
 ```
 
-The expected staging output is five pull-request snapshots, two review snapshots,
-one pull-request commit association, three workflow-run snapshots, three deployment
-snapshots, and three deployment-status snapshots. The original webhook/backfill
-pairs must still normalize to the same entity keys.
+The expected staging output is 12 pull-request snapshots, 10 review snapshots, one
+pull-request commit association, three workflow-run snapshots, three deployment
+snapshots, and three deployment-status snapshots. The original webhook/backfill pairs
+must still normalize to the same entity keys.
 
 The paired snapshots collapse into one row in each Day 9 path. Their exact manually
 calculated outcomes are:
@@ -94,5 +93,11 @@ Day 10 fixture cases prove these mart outcomes:
 Temporal contract tests reject negative lifecycle, review, deployment-success, and
 change-lead durations. The date dimension is deterministically bounded from
 2026-01-10 through 2026-01-13 for the isolated fixture.
+
+Day 11 assertions add seven exact PR-flow lifecycle/review/rework outcomes. Dashboard
+query validation then checks deterministic ordered snapshots for deployment frequency,
+direct-from-linked-PR change lead-time P50/P90, status and coverage, review latency,
+explicit `XS <=50` / `S 51-200` / `M 201-500` / `L >500` size bands, review rework,
+and open aging anchored at `2026-01-14T12:00:00Z`.
 
 Generated artifacts live under `target/` and are ignored.
