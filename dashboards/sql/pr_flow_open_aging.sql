@@ -35,7 +35,10 @@ select
         when age_hours < 168 then '3–7d'
         else '7d+'
     end as aging_bucket,
-    has_eligible_review,
+    case
+        when has_eligible_review then 'reviewed'
+        else 'awaiting_review'
+    end as review_state,
     review_rework_cycle_count,
     count(*) over (partition by repository_full_name)::bigint as repository_wip
 from open_pull_requests

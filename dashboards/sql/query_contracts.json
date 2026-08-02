@@ -18,7 +18,7 @@
     "grain_columns": ["repository_full_name", "date_day", "metric_name"],
     "required_columns": ["metric_value", "measurement_status", "coverage_ratio", "exclusion_reason", "status_label"],
     "required_values": {"measurement_status": ["measured", "configured_proxy", "unavailable"]},
-    "fixture_sha256": "83cb03db71a6ef4542d7344b5f1b3fb863ff1401a6d17f05a87c09c88f99b73f"
+    "fixture_sha256": "e32b7c4d5343c7474bd93f7a886ac7485aff0e9fb0ce9fb036131213a9ae954d"
   },
   "pr_flow_cycle_time.sql": {
     "minimum_rows": 1,
@@ -29,8 +29,9 @@
   "pr_flow_open_aging.sql": {
     "minimum_rows": 3,
     "grain_columns": ["repository_full_name", "pull_request_number"],
-    "required_columns": ["as_of", "age_hours", "aging_bucket", "repository_wip"],
-    "fixture_sha256": "065d064e233f1cac38d28358a47b310893195d7aad8898a7e1c37dbcd3cb9101"
+    "required_columns": ["as_of", "age_hours", "aging_bucket", "review_state", "repository_wip"],
+    "required_values": {"review_state": ["reviewed", "awaiting_review"]},
+    "fixture_sha256": "179056e36921965794c5a3f661f21bf82bbd661754c1a69b904744009550f47c"
   },
   "pr_flow_review_latency_distribution.sql": {
     "minimum_rows": 1,

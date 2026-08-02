@@ -24,4 +24,15 @@ select
     end as status_label
 from analytics_marts.fct_delivery_performance_daily as metrics
 inner join latest_reporting_date using (date_day)
-order by metrics.repository_full_name, metrics.metric_name;
+order by
+    row_number() over (
+        partition by metrics.measurement_status
+        order by metrics.repository_full_name, metrics.metric_name
+    ),
+    case metrics.measurement_status
+        when 'configured_proxy' then 1
+        when 'measured' then 2
+        else 3
+    end,
+    metrics.repository_full_name,
+    metrics.metric_name;
