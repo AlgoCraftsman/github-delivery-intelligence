@@ -1,14 +1,14 @@
 # GitHub Delivery Intelligence
 
 Event-driven engineering analytics using GitHub App webhooks, Kafka, Airflow, dbt,
-PostgreSQL, and Metabase to produce replayable PR-flow and evidence-aware software
-delivery metrics.
+PostgreSQL, and Metabase to produce replayable PR-flow, evidence-aware software
+delivery metrics, versioned dashboard queries, and deterministic visual evidence.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 9 checkpoint adds resolved pull-request lifecycle, first-review,
-production-deployment, and change-to-deployment intermediate models to the contracted
-dbt staging boundary, signed webhook, idempotent raw warehouse, independent PR monitor,
-restartable history backfill, and manual Airflow orchestration paths.
+current Day 11 checkpoint adds fixture-backed Delivery performance and Pull-request
+flow dashboards to the signed webhook, idempotent raw warehouse, independent PR
+monitor, restartable history backfill, manual Airflow orchestration, and contracted
+dbt analytics paths.
 
 ## Prerequisites
 
@@ -25,6 +25,8 @@ make check
 make up
 make migrate
 make ps
+make dashboard-up
+make dashboard-sql-check
 ```
 
 `make up` starts Kafka on `localhost:9092` and PostgreSQL on `localhost:55432`, then waits
@@ -37,6 +39,50 @@ Stop services without deleting data:
 ```bash
 make down
 ```
+
+Stop only the optional Metabase service while preserving its application data:
+
+```bash
+make dashboard-down
+```
+
+## Local dashboard demo
+
+`make dashboard-up` starts PostgreSQL, reapplies the idempotent read-only analytics
+role, and starts the optional Compose `dashboards` profile. Open
+<http://localhost:3000> and sign in with `demo@example.invalid` /
+`local_only_metabase_demo1`. The Metabase database user is `metabase_reader` /
+`local_only_read_only`. All of these passwords are local-only defaults and are not
+production-safe.
+
+The demo uses checked-in SQL plus manual Metabase configuration; it does not claim
+paid serialization as an OSS feature. Rebuild the isolated fixture marts before
+regenerating screenshots:
+
+```powershell
+$env:PGPASSWORD='local_only_change_me'
+psql --host localhost --port 55432 --username github_analytics `
+  --dbname github_analytics --set ON_ERROR_STOP=1 `
+  --file dbt/github_analytics/fixtures/load_github_events.sql
+
+uv run dbt source freshness `
+  --project-dir dbt/github_analytics --profiles-dir dbt/github_analytics `
+  --vars '{"github_events_identifier": "github_events_fixture"}'
+
+uv run dbt build `
+  --project-dir dbt/github_analytics --profiles-dir dbt/github_analytics `
+  --vars '{"github_events_identifier": "github_events_fixture", "fixture_validation": true}'
+
+make dashboard-sql-check
+```
+
+The loader truncates only `raw.github_events_fixture`. Dashboard definitions, metric
+status and coverage semantics, manual card configuration, and screenshot QA are in
+[`dashboards/README.md`](dashboards/README.md).
+
+![Delivery performance dashboard](dashboards/screenshots/delivery-performance.png)
+
+![Pull-request flow dashboard](dashboards/screenshots/pull-request-flow.png)
 
 ## Webhook contract
 
@@ -257,9 +303,11 @@ manually calculated Day 9 and Day 10 outcomes are documented in
 
 ## Current scope
 
-Day 10 establishes the tested source-to-mart analytics boundary, including metric
-status and evidence coverage. The scope-gate decision is recorded in
-`docs/day-10-scope-gate.md`. Dashboards, scheduled refresh orchestration, external
-alert delivery, and broader failure drills remain later build-plan work. The local
-single-broker Kafka deployment demonstrates client semantics; it is not a production
-availability topology.
+Day 11 establishes the tested source-to-dashboard demonstration boundary, including
+versioned SQL, measurement status, coverage, P50/P90 PR-flow analytics, fixed-time
+aging evidence, and visually verified screenshots. The scope-gate decision remains in
+`docs/day-10-scope-gate.md`. Dashboard 3 operational evidence, scheduled refresh
+orchestration, external alert delivery, and broader failure drills remain later
+build-plan work; operational evidence is deferred to Days 12/13 because it is not yet
+modeled. The local single-broker Kafka deployment demonstrates client semantics; it is
+not a production availability topology.

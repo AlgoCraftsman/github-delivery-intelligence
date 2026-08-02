@@ -23,7 +23,8 @@ changing model SQL.
 
 ## Intermediate
 
-Day 9 models are contracted views in `<target_schema>_intermediate`.
+Day 9 through Day 11 models are contracted views in
+`<target_schema>_intermediate`.
 
 | Model | Grain | Resolution |
 |---|---|---|
@@ -34,6 +35,12 @@ Day 9 models are contracted views in `<target_schema>_intermediate`.
 
 Intermediate models do not infer commit ancestry. Unmatched changes remain unmatched
 so Day 10 coverage calculations can distinguish measured values from evidence gaps.
+
+`int_first_eligible_review` also resolves review rework. One rework cycle is counted
+for each distinct reviewed revision whose resolved eligible non-author review state is
+`changes_requested`. `commit_sha` identifies the revision when present; the resolved
+`review_key` is the fallback identity when commit SHA is absent. Repeated snapshots of
+the same review do not create another cycle.
 
 ## Marts
 
@@ -56,3 +63,9 @@ its coverage is linked eligible changes divided by eligible merged changes.
 The allowed statuses are `measured`, `configured_proxy`, and `unavailable`.
 Unavailable rows have a null metric value and a machine-readable exclusion reason.
 No mart infers Git ancestry or turns CI failures into production failures.
+
+Day 11 dashboard queries calculate change lead-time, review-latency, and cycle-time
+P50/P90 values directly from linked or eligible `fct_pull_requests` rows. The explicit
+size bands use additions plus deletions: `XS <=50`, `S 51-200`, `M 201-500`, and
+`L >500`. The fixture-backed open-aging query uses a fixed `as_of` rather than the
+current clock.

@@ -45,3 +45,28 @@ intent.
 Host processes connect to Kafka at `localhost:9092`. Future Compose services use the
 internal listener at `kafka:29092`, avoiding metadata that incorrectly redirects a
 container client back to itself.
+
+## Optional dashboards profile
+
+Run `make dashboard-up` to start PostgreSQL, apply
+`infra/init/005_create_metabase_reader.sql`, and start the pinned Metabase service in
+the Compose `dashboards` profile. The UI is available at <http://localhost:3000> and
+persists its local application database in the `metabase_data` named volume. Run
+`make dashboard-down` to stop only Metabase without deleting that volume.
+
+The initialized demo account is `demo@example.invalid` with password
+`local_only_metabase_demo1`. Configure the **GitHub Delivery Analytics** database with
+host `postgres`, port `5432`, database `github_analytics`, user `metabase_reader`, and
+password `local_only_read_only`. These credentials are local-only examples and are not
+production-safe.
+
+The reader role has `CONNECT`, analytics-schema `USAGE`, and `SELECT` on the staging,
+intermediate, and mart relations, including future tables created by
+`github_analytics`. It is explicitly non-superuser and cannot create databases or
+roles, inherit another role, replicate, or access `raw`, `serving`, or `ops`.
+
+If an existing PostgreSQL volume predates the role, `make dashboard-up`,
+`make metabase-access`, or `make migrate` applies the idempotent script without volume
+deletion. Metabase OSS content is then configured manually from the versioned SQL in
+`dashboards/sql`; the local application database is not presented as portable paid
+serialization.
