@@ -1,7 +1,10 @@
 """GitHub delivery intelligence application package."""
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = version("github-delivery-intelligence")
+try:
+    __version__ = version("github-delivery-intelligence")
+except PackageNotFoundError:
+    __version__ = "0+source"
 
 __all__ = ["__version__"]
