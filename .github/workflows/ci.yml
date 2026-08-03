@@ -115,6 +115,15 @@ jobs:
           PGUSER: github_analytics
           PGPASSWORD: local_only_change_me
 
+      - name: Apply analytics refresh ledger migration
+        run: psql --set ON_ERROR_STOP=1 --file infra/init/006_create_analytics_refresh_runs.sql
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGDATABASE: github_analytics
+          PGUSER: github_analytics
+          PGPASSWORD: local_only_change_me
+
       - name: Check source freshness
         run: >-
           uv run dbt source freshness
@@ -142,3 +151,20 @@ jobs:
 
       - name: Check DAG imports
         run: make airflow-dag-check
+
+      - name: Start fixture PostgreSQL
+        run: docker compose -f infra/docker-compose.yml up -d --wait postgres
+
+      - name: Apply migrations
+        run: make migrate
+
+      - name: Load deterministic raw fixtures
+        run: >-
+          PGPASSWORD=local_only_change_me psql
+          --host localhost --port 55432
+          --username github_analytics --dbname github_analytics
+          --set ON_ERROR_STOP=1
+          --file dbt/github_analytics/fixtures/load_github_events.sql
+
+      - name: Execute fixture-backed analytics refresh DAG
+        run: make airflow-analytics-check

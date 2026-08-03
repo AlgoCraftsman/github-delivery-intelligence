@@ -1,6 +1,104 @@
 version: 2
 
 models:
+  - name: fct_pipeline_health_runs
+    description: >
+      Dashboard-safe analytics refresh health. Grain: one Airflow analytics_refresh
+      run; bounded summaries are retained in ops but this mart exposes only scalar
+      health fields and the sanitized terminal error classification.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "duration_seconds is null or duration_seconds >= 0"
+      - expression_is_true:
+          arguments:
+            expression: "finished_at is null or finished_at >= started_at"
+    columns:
+      - name: run_id
+        data_type: text
+        description: Stable application run identity derived from Airflow orchestration identity.
+        data_tests: [not_null, unique]
+      - name: dag_run_id
+        data_type: text
+        description: Stable Airflow dag_run_id used as the retry-idempotency boundary.
+        data_tests: [not_null, unique]
+      - name: logical_date
+        data_type: timestamp with time zone
+        description: Airflow logical date for the hourly interval.
+        data_tests: [not_null]
+      - name: data_interval_start
+        data_type: timestamp with time zone
+        description: Inclusive start of the scheduled data interval.
+        data_tests: [not_null]
+      - name: data_interval_end
+        data_type: timestamp with time zone
+        description: Exclusive end of the scheduled data interval.
+        data_tests: [not_null]
+      - name: started_at
+        data_type: timestamp with time zone
+        description: Wall-clock time when the application persisted running state.
+        data_tests: [not_null]
+      - name: finished_at
+        data_type: timestamp with time zone
+        description: Wall-clock terminal time; null only while a run is active.
+      - name: duration_seconds
+        data_type: bigint
+        description: Nonnegative terminal elapsed seconds.
+      - name: run_status
+        data_type: text
+        description: Explicit application-owned run status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["running", "succeeded", "failed"]
+      - name: source_relation
+        data_type: text
+        description: Validated raw relation observed by the run.
+        data_tests: [not_null]
+      - name: source_watermark
+        data_type: timestamp with time zone
+        description: Maximum source ingested_at observed at run start.
+      - name: source_delay_seconds
+        data_type: bigint
+        description: Nonnegative age of the source watermark at run start.
+      - name: dbt_invocation_id
+        data_type: text
+        description: Invocation identity read from the latest dbt artifact.
+      - name: dbt_succeeded_count
+        data_type: integer
+        description: dbt result nodes with success or pass status.
+        data_tests: [not_null]
+      - name: dbt_failed_count
+        data_type: integer
+        description: dbt result nodes with fail status.
+        data_tests: [not_null]
+      - name: dbt_skipped_count
+        data_type: integer
+        description: dbt result nodes skipped by dependency or selection behavior.
+        data_tests: [not_null]
+      - name: dbt_warning_count
+        data_type: integer
+        description: dbt result nodes with warning status.
+        data_tests: [not_null]
+      - name: dbt_error_count
+        data_type: integer
+        description: dbt result nodes with error or unknown status.
+        data_tests: [not_null]
+      - name: error_category
+        data_type: text
+        description: Bounded machine-readable terminal failure category.
+      - name: error_summary
+        data_type: character varying(1000)
+        description: Bounded sanitized terminal failure summary, never a full log or traceback.
+      - name: is_latest_successful_run
+        data_type: boolean
+        description: Whether the row has the most recent successful finished_at value.
+        data_tests: [not_null]
+
   - name: dim_repository
     description: >
       Observed and configured GitHub repositories with metric evidence rules.

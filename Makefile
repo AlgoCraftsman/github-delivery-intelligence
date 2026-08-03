@@ -2,7 +2,7 @@ UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check airflow-image airflow-dag-check
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check airflow-image airflow-dag-check airflow-analytics-check analytics-refresh
 
 install:
 	$(UV) sync --frozen
@@ -81,6 +81,11 @@ migrate:
 		--dbname "$${POSTGRES_DB:-github_analytics}" \
 		--set ON_ERROR_STOP=1 \
 		--command "\i /docker-entrypoint-initdb.d/005_create_metabase_reader.sql"
+	docker compose -f $(COMPOSE_FILE) exec -T postgres \
+		psql --username "$${POSTGRES_USER:-github_analytics}" \
+		--dbname "$${POSTGRES_DB:-github_analytics}" \
+		--set ON_ERROR_STOP=1 \
+		--command "\i /docker-entrypoint-initdb.d/006_create_analytics_refresh_runs.sql"
 
 metabase-access:
 	docker compose -f $(COMPOSE_FILE) exec -T postgres \
@@ -145,3 +150,23 @@ airflow-dag-check: airflow-image
 		--env AIRFLOW__CORE__LOAD_EXAMPLES=False \
 		$(AIRFLOW_IMAGE) \
 		python /opt/airflow/check_dag.py
+
+airflow-analytics-check: airflow-image
+	docker run --rm \
+		--network github-delivery-intelligence_default \
+		--env AIRFLOW__CORE__LOAD_EXAMPLES=False \
+		--env ANALYTICS_REFRESH_DATABASE_URL=postgresql://github_analytics:local_only_change_me@postgres:5432/github_analytics \
+		--env ANALYTICS_REFRESH_SOURCE_IDENTIFIER=github_events_fixture \
+		--env ANALYTICS_REFRESH_DBT_PROJECT_DIR=/opt/airflow/dbt/github_analytics \
+		--env ANALYTICS_REFRESH_DBT_PROFILES_DIR=/opt/airflow/dbt/github_analytics \
+		--env ANALYTICS_REFRESH_DBT_TARGET_DIR=/opt/airflow/dbt/github_analytics/target/analytics_refresh \
+		--env DBT_POSTGRES_HOST=postgres \
+		--env DBT_POSTGRES_PORT=5432 \
+		--env DBT_POSTGRES_DB=github_analytics \
+		--env DBT_POSTGRES_USER=github_analytics \
+		--env DBT_POSTGRES_PASSWORD=local_only_change_me \
+		--env DBT_POSTGRES_SCHEMA=analytics \
+		$(AIRFLOW_IMAGE) \
+		python /opt/airflow/run_analytics_refresh_smoke.py
+
+analytics-refresh: airflow-analytics-check
