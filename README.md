@@ -5,10 +5,9 @@ PostgreSQL, and Metabase to produce replayable PR-flow, evidence-aware software
 delivery metrics, versioned dashboard queries, and deterministic visual evidence.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 11 checkpoint adds fixture-backed Delivery performance and Pull-request
-flow dashboards to the signed webhook, idempotent raw warehouse, independent PR
-monitor, restartable history backfill, manual Airflow orchestration, and contracted
-dbt analytics paths.
+current Day 12 checkpoint adds an hourly, durable analytics refresh and a sanitized
+pipeline-health mart to the signed webhook, idempotent raw warehouse, independent PR
+monitor, restartable history backfill, dashboards, and contracted dbt analytics paths.
 
 ## Prerequisites
 
@@ -218,13 +217,13 @@ The token needs read access to repository contents and metadata for GraphQL, Act
 read access for workflow runs, and Deployments read access for deployments and their
 statuses.
 
-## Airflow backfill orchestration
+## Airflow orchestration
 
 `airflow/Dockerfile` extends the pinned Apache Airflow 3.3.0 Python 3.12 image, copies
-the tested application package, installs only its pinned backfill dependencies while
-pinning Airflow to the base-image version, runs `pip check`, and copies the DAG into the
-image. Keeping the backfill runtime separate avoids forcing the webhook service's newer
-FastAPI pin into Airflow. Build it and verify that Airflow reports no DAG import errors:
+the tested application package and dbt project, installs pinned backfill plus
+`dbt-core==1.12.0` / `dbt-postgres==1.11.0` dependencies, pins Airflow to the base-image
+version, and runs `pip check`. Webhook and Kafka dependencies stay out of this image.
+Build it and verify that both expected DAGs import without errors:
 
 ```bash
 make airflow-image
@@ -238,8 +237,24 @@ three bounded retries. Because each API page and checkpoint commit in one Postgr
 transaction, an Airflow retry resumes from durable progress and duplicate source keys
 remain harmless.
 
-The image is the Day 7 orchestration artifact; a multi-service Airflow deployment is
-deferred. See `airflow/README.md` for runtime environment and network requirements.
+The `analytics_refresh` DAG runs hourly in UTC with `catchup=False` and one active run.
+Its ordered tasks persist `running` and check the raw watermark/freshness, execute the
+contracted dbt build, then persist `succeeded`. Exhausted failures persist `failed` and
+re-raise so Airflow agrees with the durable ledger. `(dag_id, dag_run_id)` makes task
+retries update one row. Bounded summaries come from explicit `sources.json` and
+`run_results.json` target artifacts; command output, credentials, payloads, and full
+tracebacks are not stored.
+
+After starting PostgreSQL, applying migrations, and loading the isolated fixture, run
+the supported Airflow 3.3 test path inside the image:
+
+```bash
+make airflow-analytics-check
+```
+
+This is still an image and DAG artifact, not a production scheduler/API/executor
+topology. Streaming consumers remain long-running services outside Airflow. See
+`airflow/README.md` for runtime variables, container paths, and inspection queries.
 
 ## dbt analytics models
 
@@ -271,13 +286,15 @@ The change linkage prefers merge-commit evidence and falls back to a directly ma
 pull-request commit. It does not infer Git ancestry or claim coverage for an unmatched
 change.
 
-Five contracted marts expose the core analytics vertical slice:
+The contracted marts expose the core analytics vertical slice and run health:
 
 - repository evidence configuration and a bounded date spine
 - pull-request lifecycle and exact-SHA deployment linkage
 - measured deployment statuses and explicitly configured workflow proxies
 - one repository/date/metric row with status, coverage, definition version, and
   exclusion reason
+- one `analytics_refresh` run with watermark age, dbt result counts, bounded failure
+  classification, and latest-success state
 
 Deployment frequency is measured only after repository configuration. Change lead
 time is calculated only for successfully linked changes and publishes linkage
@@ -303,11 +320,11 @@ manually calculated Day 9 and Day 10 outcomes are documented in
 
 ## Current scope
 
-Day 11 establishes the tested source-to-dashboard demonstration boundary, including
-versioned SQL, measurement status, coverage, P50/P90 PR-flow analytics, fixed-time
-aging evidence, and visually verified screenshots. The scope-gate decision remains in
-`docs/day-10-scope-gate.md`. Dashboard 3 operational evidence, scheduled refresh
-orchestration, external alert delivery, and broader failure drills remain later
-build-plan work; operational evidence is deferred to Days 12/13 because it is not yet
-modeled. The local single-broker Kafka deployment demonstrates client semantics; it is
-not a production availability topology.
+Day 12 establishes the scheduled source-to-mart refresh boundary and durable evidence
+for last refresh status, last successful Airflow/dbt run, source watermark and delay,
+dbt result counts, and sanitized failures. Day 11 dashboard SQL and screenshots remain
+unchanged. Duplicate-delivery health, DLQ incidents and last-failure evidence, failure
+drills, throughput, and latency benchmarks are intentionally unavailable until they are
+actually instrumented or measured in Day 13. The local single-broker Kafka deployment
+and Airflow test container demonstrate semantics; neither is a production availability
+topology.

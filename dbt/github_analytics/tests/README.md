@@ -20,6 +20,8 @@ This directory owns cross-model and fixture-specific invariants:
 - dashboard SQL contracts must retain deterministic order, unique declared grains,
   required status values, expected row counts, and reviewed fixture snapshots;
 - resolved timestamps and durations cannot run backward.
+- pipeline-health run identities remain unique, statuses stay accepted, terminal
+  durations are nonnegative, and finish timestamps cannot precede starts.
 
 Fixture-only assertions compile to empty result sets unless
 `fixture_validation: true` is passed. This keeps production builds independent of

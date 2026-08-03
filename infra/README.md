@@ -16,8 +16,9 @@ the three-partition broker default.
 
 The PostgreSQL initialization scripts create the `raw`, `serving`, `ops`, and
 `analytics` schemas, the append-only `raw.github_events` table, the PR-monitor
-projection tables, `ops.alert_outbox`, and `raw.backfill_checkpoints`. Initialization
-scripts run only when the named volume is empty.
+projection tables, `ops.alert_outbox`, `raw.backfill_checkpoints`, and the
+`ops.analytics_refresh_runs` ledger. Initialization scripts run only when the named
+volume is empty.
 
 To apply a newly added idempotent schema script to an existing local named volume
 without deleting data, start the services and run:
@@ -25,6 +26,11 @@ without deleting data, start the services and run:
 ```bash
 make migrate
 ```
+
+`make migrate` includes idempotent `006_create_analytics_refresh_runs.sql`. It creates
+or verifies the Day 12 ledger and indexes in place; never delete `postgres_data` to
+apply it. The ledger constrains statuses, terminal timestamps, intervals, nonnegative
+source delay/result counts, bounded error text, and `(dag_id, dag_run_id)` uniqueness.
 
 The raw table uses `(source, source_record_key)` as its durable uniqueness boundary.
 Webhook rows use the real GitHub delivery ID as both `source_record_key` and
@@ -70,3 +76,7 @@ If an existing PostgreSQL volume predates the role, `make dashboard-up`,
 deletion. Metabase OSS content is then configured manually from the versioned SQL in
 `dashboards/sql`; the local application database is not presented as portable paid
 serialization.
+
+Day 12 exposes refresh health through `analytics_marts.fct_pipeline_health_runs`.
+`metabase_reader` can select that sanitized view but retains no `ops` or `raw` schema
+access. The mart does not expose stored artifact JSON, raw logs, payloads, or secrets.

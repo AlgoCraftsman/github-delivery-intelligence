@@ -6,6 +6,10 @@ preserving source lineage. It requires Python 3.12, `dbt-core==1.12.0`, and
 `dbt-postgres==1.11.0`; all three are installed by the repository's locked uv
 environment.
 
+Apply `infra/init/006_create_analytics_refresh_runs.sql` (normally `make migrate`)
+before parsing or building Day 12 models because the pipeline-health mart sources the
+application-owned ops ledger.
+
 ## Configure PostgreSQL
 
 `profiles.yml` reads the following environment variables and supplies local Compose
@@ -101,3 +105,18 @@ explicit `XS <=50` / `S 51-200` / `M 201-500` / `L >500` size bands, review rewo
 and open aging anchored at `2026-01-14T12:00:00Z`.
 
 Generated artifacts live under `target/` and are ignored.
+
+## Pipeline-health run mart
+
+`analytics_marts.fct_pipeline_health_runs` has one row per hourly
+`analytics_refresh` run. It exposes Airflow logical/data-interval times, terminal
+duration and status, source watermark/delay captured at run start, dbt invocation and
+result counts, bounded sanitized failure fields, and latest-success state. The source
+artifact JSON remains in `ops`; raw payloads, credentials, logs, and traces never enter
+the mart.
+
+The scheduled image uses explicit project/profile and target paths. Production reads
+`raw.github_events`; fixture validation sets
+`ANALYTICS_REFRESH_SOURCE_IDENTIFIER=github_events_fixture` without changing model SQL.
+Duplicate/DLQ health and benchmark evidence are not represented by this mart and remain
+unavailable until actual instrumentation or Day 13 validation exists.
