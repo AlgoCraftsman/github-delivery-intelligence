@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: analytics_ops
+    description: Application-owned operational state summarized into dashboard-safe marts.
+    schema: ops
+    tables:
+      - name: analytics_refresh_runs
+        description: Durable run ledger for the hourly analytics_refresh Airflow DAG.

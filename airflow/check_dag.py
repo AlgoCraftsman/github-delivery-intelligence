@@ -35,11 +35,11 @@ def main() -> int:
     if errors != []:
         raise RuntimeError(f"Airflow DAG import errors: {errors!r}")
     dags = _json_output(["airflow", "dags", "list", "--output=json"])
-    if not isinstance(dags, list) or [
-        item.get("dag_id") for item in dags if isinstance(item, dict)
-    ] != ["github_backfill"]:
+    dag_ids = sorted(item.get("dag_id") for item in dags if isinstance(item, dict))
+    expected = ["analytics_refresh", "github_backfill"]
+    if not isinstance(dags, list) or dag_ids != expected:
         raise RuntimeError(f"unexpected Airflow DAG inventory: {dags!r}")
-    print('{"dags":["github_backfill"],"import_errors":[]}')
+    print('{"dags":["analytics_refresh","github_backfill"],"import_errors":[]}')
     return 0
 
 

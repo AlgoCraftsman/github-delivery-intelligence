@@ -53,6 +53,7 @@ Day 10 models are contracted views in `<target_schema>_marts`.
 | `fct_pull_requests` | one repository-scoped PR | lifecycle, review timing, and first exact-SHA production link |
 | `fct_deployments` | one deployment or configured workflow run | classify measured signals, proxies, and exclusions |
 | `fct_delivery_performance_daily` | one repository/date/metric | metric value, status, coverage, version, and exclusion reason |
+| `fct_pipeline_health_runs` | one analytics refresh run | source watermark/delay, dbt result counts, terminal state, and latest success |
 
 `fct_delivery_performance_daily` is long-form so every metric result has the same
 integrity contract. Reporting dates use each repository's configured timezone.
@@ -69,3 +70,9 @@ P50/P90 values directly from linked or eligible `fct_pull_requests` rows. The ex
 size bands use additions plus deletions: `XS <=50`, `S 51-200`, `M 201-500`, and
 `L >500`. The fixture-backed open-aging query uses a fixed `as_of` rather than the
 current clock.
+
+The Day 12 pipeline-health mart reads the application-owned
+`ops.analytics_refresh_runs` source but exposes only dashboard-safe scalar fields. Its
+bounded artifact summaries remain private in `ops`; Metabase receives no direct ops
+grant. Duplicate-delivery, DLQ, failure-drill, throughput, and latency evidence is not
+inferred.

@@ -1,4 +1,6 @@
-# Backfill-only runtime. Webhook and Kafka consumer dependencies stay in their images.
+# Backfill and analytics-refresh runtime. Webhook/Kafka dependencies stay out.
+dbt-core==1.12.0
+dbt-postgres==1.11.0
 httpx2==2.7.0
 psycopg[binary,pool]==3.3.4
 pydantic-settings==2.14.2
