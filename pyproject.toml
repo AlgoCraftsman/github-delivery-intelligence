@@ -55,7 +55,7 @@ known-first-party = ["github_analytics"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "tools/run_day13_evidence.py"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers --cov=github_analytics --cov-report=term-missing --cov-fail-under=100"
