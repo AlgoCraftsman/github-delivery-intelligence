@@ -5,9 +5,10 @@ PostgreSQL, and Metabase to produce replayable PR-flow, evidence-aware software
 delivery metrics, versioned dashboard queries, and deterministic visual evidence.
 
 The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 12 checkpoint adds an hourly, durable analytics refresh and a sanitized
-pipeline-health mart to the signed webhook, idempotent raw warehouse, independent PR
-monitor, restartable history backfill, dashboards, and contracted dbt analytics paths.
+current Day 13 checkpoint adds deterministic fixture replay, volume-preserving failure
+drills, and a measured local benchmark to the signed webhook, idempotent raw warehouse,
+independent PR monitor, restartable history backfill, scheduled analytics refresh,
+dashboards, and contracted dbt analytics paths.
 
 ## Prerequisites
 
@@ -318,13 +319,34 @@ build` with fixture assertions enabled. Exact local commands, resource counts, a
 manually calculated Day 9 and Day 10 outcomes are documented in
 `dbt/github_analytics/README.md`.
 
+## Replay, failure-drill, and benchmark evidence
+
+Run the complete local evidence workflow from the repository root:
+
+```powershell
+make UV=.venv/Scripts/uv.exe day13-evidence
+```
+
+The workflow appends uniquely identified synthetic fixture records, exercises duplicate
+and crash-window replay, verifies acknowledged DLQ handling, briefly stops and restarts
+the existing Kafka and PostgreSQL services, and resumes a durable backfill checkpoint.
+It never truncates `raw.github_events` or deletes Compose containers or named volumes.
+
+The latest [reviewer-facing Day 13 evidence table](docs/day-13-evidence.md) records seven
+passed synthetic checks and leaves the live GitHub App PR lifecycle explicitly
+`unavailable`. On the documented local Docker Desktop environment, all 500 signed
+requests returned `202` after Kafka acknowledgement and landed as 500 unique raw rows.
+The receiver scope measured 179.892 requests/s with p50 120.050 ms and p95 194.072 ms.
+These measurements describe the named local single-broker workload; they are not a
+production capacity or high-availability claim.
+
 ## Current scope
 
-Day 12 establishes the scheduled source-to-mart refresh boundary and durable evidence
-for last refresh status, last successful Airflow/dbt run, source watermark and delay,
-dbt result counts, and sanitized failures. Day 11 dashboard SQL and screenshots remain
-unchanged. Duplicate-delivery health, DLQ incidents and last-failure evidence, failure
-drills, throughput, and latency benchmarks are intentionally unavailable until they are
-actually instrumented or measured in Day 13. The local single-broker Kafka deployment
-and Airflow test container demonstrate semantics; neither is a production availability
-topology.
+Day 13 establishes measured local evidence for acknowledged fixture landing, duplicate
+absorption, crash replay, DLQ acknowledgement ordering, Kafka and PostgreSQL recovery,
+and backfill cursor resume. The scheduled source-to-mart refresh evidence, Day 11
+dashboard SQL, and screenshots remain unchanged. Synthetic drills are not production
+incidents, dashboard-level duplicate/DLQ telemetry is not inferred from them, and the
+live GitHub App PR lifecycle remains unavailable until a real delivery is observed. The
+local single-broker Kafka deployment and Airflow test container demonstrate semantics;
+neither is a production availability topology.

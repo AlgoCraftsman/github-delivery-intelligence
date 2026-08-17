@@ -2,7 +2,7 @@ UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
 
-.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check airflow-image airflow-dag-check airflow-analytics-check analytics-refresh
+.PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check airflow-image airflow-dag-check airflow-analytics-check analytics-refresh day13-evidence
 
 install:
 	$(UV) sync --frozen
@@ -170,3 +170,12 @@ airflow-analytics-check: airflow-image
 		python /opt/airflow/run_analytics_refresh_smoke.py
 
 analytics-refresh: airflow-analytics-check
+
+day13-evidence:
+	docker compose -f $(COMPOSE_FILE) up -d --wait kafka postgres
+	$(MAKE) topics migrate
+	$(UV) run python tools/run_day13_evidence.py \
+		--event-count 500 \
+		--concurrency 25 \
+		--json-output .artifacts/day-13-evidence.json \
+		--markdown-output docs/day-13-evidence.md
