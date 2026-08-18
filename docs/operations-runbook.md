@@ -40,6 +40,42 @@ make ps
 docker compose -f infra/docker-compose.yml logs --tail 100 kafka postgres
 ```
 
+## Concurrent isolated stack
+
+To keep the default stack running while starting a second deterministic stack, choose
+a new Compose project name and unused host ports. In PowerShell:
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = 'github-delivery-intelligence-day14-isolated'
+$env:KAFKA_PORT = '19092'
+$env:POSTGRES_PORT = '55433'
+$env:DBT_POSTGRES_PORT = '55433'
+
+uv sync --frozen
+make demo
+make ps
+```
+
+`KAFKA_PORT` changes Kafka's host binding and advertised host address. Kafka health
+and topic administration use the internal listener, so they remain independent of
+that host port. `POSTGRES_PORT` changes PostgreSQL's host binding, and
+`DBT_POSTGRES_PORT` must have the same value so host-run dbt reaches the isolated
+database. A distinct `COMPOSE_PROJECT_NAME` gives the containers, network, and named
+volumes separate identities.
+
+Stop only the isolated project while those variables are still set:
+
+```powershell
+make down
+Remove-Item Env:COMPOSE_PROJECT_NAME
+Remove-Item Env:KAFKA_PORT
+Remove-Item Env:POSTGRES_PORT
+Remove-Item Env:DBT_POSTGRES_PORT
+```
+
+Ordinary `make down` preserves the isolated named volumes. Do not use `down -v`, a
+volume-removal command, or a prune command for routine isolation or recovery.
+
 ## Health and readiness
 
 - Kafka and PostgreSQL must show `healthy` in `make ps`.

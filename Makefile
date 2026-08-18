@@ -1,6 +1,7 @@
 UV ?= uv
 COMPOSE_FILE := infra/docker-compose.yml
 AIRFLOW_IMAGE ?= github-delivery-intelligence-airflow:3.3.0
+KAFKA_INTERNAL_BOOTSTRAP_SERVER ?= localhost:29092
 
 .PHONY: install lock format format-check lint typecheck test check compose-config up down ps logs topics migrate metabase-access dashboard-up dashboard-down webhook warehouse pr-monitor backfill dbt-debug dbt-parse dbt-freshness dbt-build dashboard-sql-check demo airflow-image airflow-dag-check airflow-analytics-check analytics-refresh day13-evidence
 
@@ -47,14 +48,14 @@ logs:
 topics:
 	docker compose -f $(COMPOSE_FILE) exec -T kafka \
 		/opt/kafka/bin/kafka-topics.sh \
-		--bootstrap-server localhost:9092 \
+		--bootstrap-server $(KAFKA_INTERNAL_BOOTSTRAP_SERVER) \
 		--create --if-not-exists \
 		--topic github.events.raw.v1 \
 		--partitions 3 \
 		--replication-factor 1
 	docker compose -f $(COMPOSE_FILE) exec -T kafka \
 		/opt/kafka/bin/kafka-topics.sh \
-		--bootstrap-server localhost:9092 \
+		--bootstrap-server $(KAFKA_INTERNAL_BOOTSTRAP_SERVER) \
 		--create --if-not-exists \
 		--topic github.events.dlq.v1 \
 		--partitions 1 \

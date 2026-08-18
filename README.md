@@ -73,6 +73,26 @@ make down
 
 Do not use `docker compose down -v` for routine shutdown, migration, or recovery.
 
+To run a second deterministic stack concurrently in PowerShell, give it a distinct
+Compose project and unused host ports:
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = 'github-delivery-intelligence-day14-isolated'
+$env:KAFKA_PORT = '19092'
+$env:POSTGRES_PORT = '55433'
+$env:DBT_POSTGRES_PORT = '55433'
+
+uv sync --frozen
+make demo
+make ps
+```
+
+`KAFKA_PORT` and `POSTGRES_PORT` control the host bindings, while
+`DBT_POSTGRES_PORT` must match the overridden PostgreSQL host port. The distinct
+`COMPOSE_PROJECT_NAME` isolates container, network, and volume names. Stop that
+project with ordinary `make down` while the same variables are set; this preserves
+its volumes. Never use `down -v` for this workflow.
+
 ## What the demo proves
 
 The deterministic workflow proves that the checked-in synthetic source data is fresh,
@@ -212,8 +232,6 @@ separately authorized destructive local-reset procedure.
   lifecycle; that evidence remains explicitly unavailable.
 - Failed GitHub delivery discovery/redelivery and external alert dispatch are deferred.
 - Kafka is a plaintext single-broker local topology with replication factor one.
-- The local quickstart is validated on the default Kafka port; changing the advertised
-  host port is not a supported simultaneous-stack isolation path.
 - PostgreSQL, Metabase, and `.env.example` use local-only example passwords.
 - The Airflow path validates an image and DAG behavior, not a production scheduler or
   executor topology.

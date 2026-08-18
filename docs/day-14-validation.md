@@ -73,6 +73,57 @@ volume. The supported documented quickstart uses the default Kafka port; validat
 therefore preserved and stopped the original stack, used a distinct Compose project on
 the default ports, and restored the original stack afterward.
 
+## Alternate-port isolation resolution and concurrent revalidation
+
+Revalidation date: 2026-08-18
+
+The earlier failure remains recorded above as the original observation. Its root cause
+was that both the Kafka health check and `make topics` ran inside the broker container
+but bootstrapped through the host listener at `localhost:9092`. With
+`KAFKA_PORT=19092`, broker metadata redirected those clients to the host-advertised
+`localhost:19092`, which is not the broker's container port.
+
+The health check and topic-administration commands now bootstrap through the internal
+listener at `localhost:29092`. Host processes and the advertised host listener retain
+their existing `localhost:9092` default and honor `KAFKA_PORT` overrides.
+
+The working repository was revalidated concurrently with the original stack using:
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = 'github-delivery-intelligence-day14-port-fix'
+$env:KAFKA_PORT = '19092'
+$env:POSTGRES_PORT = '55433'
+$env:DBT_POSTGRES_PORT = '55433'
+$env:PATH = (Resolve-Path '.\.venv\Scripts').Path + ';' + $env:PATH
+
+make demo
+make ps
+```
+
+Observed outcomes:
+
+- The isolated Kafka broker became healthy on host port 19092 while the original
+  broker remained healthy on 9092.
+- Both topics were created successfully through the internal listener.
+- The isolated PostgreSQL service became healthy on host port 55433 while the
+  original remained healthy on 55432.
+- The successful `make demo` rerun completed in 61.093 seconds and exited zero.
+- dbt freshness passed and dbt completed 322/322 nodes with 0 warnings, 0 errors, and
+  0 skips.
+- All eight dashboard SQL contracts passed, 25 metric rows printed, and the command
+  printed `Deterministic demo completed successfully.`
+- The original and isolated PostgreSQL containers mounted distinct volumes:
+  `github-delivery-intelligence_postgres_data` and
+  `github-delivery-intelligence-day14-port-fix_postgres_data`.
+- Ordinary `make down` stopped only the isolated project and retained its volume. The
+  original Kafka and PostgreSQL services remained healthy.
+
+The first live command in the approved Windows context reached healthy services,
+created both topics, and applied migrations, then stopped before the Python demo
+because `uv` was not on that context's `PATH`. Adding the repository `.venv` scripts
+directory to `PATH` resolved that environment prerequisite; the product workflow then
+passed as recorded above.
+
 This validation proves the deterministic local reviewer path. It does not add live
 GitHub App lifecycle evidence or production infrastructure, availability, security,
 capacity, or latency evidence.

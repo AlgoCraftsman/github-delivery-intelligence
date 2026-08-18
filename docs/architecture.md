@@ -121,6 +121,11 @@ listeners, one PostgreSQL container, local-only passwords, host-bound ports, and
 single-machine Airflow image/DAG smoke path. It is not production infrastructure,
 capacity evidence, or a high-availability design.
 
+Kafka exposes a host-advertised listener for processes running on the host and an
+internal listener for broker health and in-container administration. This separation
+allows isolated Compose projects to use different `KAFKA_PORT` host bindings without
+redirecting container-local clients to another project's host port.
+
 A production deployment would need replicated and authenticated Kafka, encrypted
 network paths, managed secret injection and rotation, PostgreSQL backup/restore and
 high availability, independently supervised receiver and consumer processes,
@@ -135,9 +140,6 @@ topology.
 - Slack dispatch from the alert outbox is deferred.
 - The local raw topic has no schema registry and only repository-key partition
   ordering, not global ordering.
-- The local quickstart assumes Kafka's default host port. Changing `KAFKA_PORT` also
-  changes the host-advertised listener, which is not a validated simultaneous-stack
-  isolation path for the in-container health command.
 - GitHub workflow history can be capped for broad windows, and deployment-status
   history has an upstream retention limit; the backfill reports rather than hides
   those gaps.
