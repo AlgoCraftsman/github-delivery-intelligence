@@ -135,6 +135,9 @@ topology.
 - Slack dispatch from the alert outbox is deferred.
 - The local raw topic has no schema registry and only repository-key partition
   ordering, not global ordering.
+- The local quickstart assumes Kafka's default host port. Changing `KAFKA_PORT` also
+  changes the host-advertised listener, which is not a validated simultaneous-stack
+  isolation path for the in-container health command.
 - GitHub workflow history can be capped for broad windows, and deployment-status
   history has an upstream retention limit; the backfill reports rather than hides
   those gaps.

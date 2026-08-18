@@ -200,6 +200,8 @@ separately authorized destructive local-reset procedure.
 - [Dashboard guide](dashboards/README.md) — versioned SQL, manual Metabase setup, and
   screenshot evidence.
 - [Airflow guide](airflow/README.md) — DAG behavior, runtime variables, and smoke path.
+- [Day 14 validation](docs/day-14-validation.md) — observed isolated fresh-clone
+  quickstart commands, results, timing, and preserved service/volume state.
 - [Architecture decisions](docs/adr/README.md) — reviewed technology and delivery
   decisions.
 - [15-day build plan](BUILD_PLAN.md) — scope, milestones, and acceptance criteria.
@@ -210,6 +212,8 @@ separately authorized destructive local-reset procedure.
   lifecycle; that evidence remains explicitly unavailable.
 - Failed GitHub delivery discovery/redelivery and external alert dispatch are deferred.
 - Kafka is a plaintext single-broker local topology with replication factor one.
+- The local quickstart is validated on the default Kafka port; changing the advertised
+  host port is not a supported simultaneous-stack isolation path.
 - PostgreSQL, Metabase, and `.env.example` use local-only example passwords.
 - The Airflow path validates an image and DAG behavior, not a production scheduler or
   executor topology.

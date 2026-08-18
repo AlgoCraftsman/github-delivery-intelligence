@@ -550,7 +550,7 @@ Each pull request includes:
 
 ## 13. Release acceptance checklist
 
-- [ ] Fresh clone starts the core stack with documented commands.
+- [x] Fresh clone starts the core stack with documented commands.
 - [ ] No implementation work was committed directly to `main`.
 - [ ] All images and dependencies use pinned versions or digests.
 - [ ] Webhook signature validation and broker acknowledgement are tested.
