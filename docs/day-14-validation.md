@@ -124,6 +124,62 @@ because `uv` was not on that context's `PATH`. Adding the repository `.venv` scr
 directory to `PATH` resolved that environment prerequisite; the product workflow then
 passed as recorded above.
 
+## Alternate-port fresh-clone revalidation
+
+Validated commit: `4aa0becf7fb118ad51c222868edf71449bbb2b03`
+
+The validated commit was exported to the new bundle
+`.artifacts/day14-4aa0bec.bundle`. `git bundle verify` reported a complete history and
+the expected feature-branch ref, and the bundle was cloned into the new path
+`.artifacts/day14-port-fix-fresh-4aa0bec`. The clone resolved to the commit above and
+had no `.venv` before dependency installation.
+
+A standalone uv 0.11.29 executable was placed on `PATH`. The clone used its own new uv
+cache and did not reuse the source checkout's package or virtual environment. From the
+fresh clone, the revalidation used a third Compose project and another pair of unused
+host ports:
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = 'github-delivery-intelligence-day14-fresh-port-fix'
+$env:KAFKA_PORT = '19093'
+$env:POSTGRES_PORT = '55434'
+$env:DBT_POSTGRES_PORT = '55434'
+
+uv sync --frozen
+make demo
+make ps
+```
+
+Observed fresh-clone outcomes:
+
+- Pinned uv 0.11.29 used CPython 3.12.13, created the clone's `.venv`, and prepared
+  and installed 90 locked packages in 20.026 seconds.
+- `make demo` completed in 65.118 seconds and exited zero.
+- Kafka became healthy on host port 19093, PostgreSQL became healthy on 55434, and
+  topic creation succeeded through the internal listener.
+- dbt freshness passed and dbt completed 322/322 nodes with 0 warnings, 0 errors, and
+  0 skips.
+- All eight dashboard SQL contracts passed, 25 metric rows printed, and the demo
+  printed `Deterministic demo completed successfully.`
+- The original Kafka and PostgreSQL services remained healthy concurrently on ports
+  9092 and 55432.
+- The fresh project mounted the distinct
+  `github-delivery-intelligence-day14-fresh-port-fix_postgres_data` volume. Ordinary
+  `make down` stopped only its containers and retained that volume.
+
+The final volume audit retained all six names:
+
+- `github-delivery-intelligence_postgres_data`
+- `github-delivery-intelligence_metabase_data`
+- `github-delivery-intelligence-day14-fresh_postgres_data`
+- `github-delivery-intelligence-day14-fresh-default_postgres_data`
+- `github-delivery-intelligence-day14-port-fix_postgres_data`
+- `github-delivery-intelligence-day14-fresh-port-fix_postgres_data`
+
+No volume was deleted or recreated for migration or recovery. Both alternate-port
+demos reloaded only `raw.github_events_fixture`; they did not truncate or mutate
+append-only `raw.github_events`.
+
 This validation proves the deterministic local reviewer path. It does not add live
 GitHub App lifecycle evidence or production infrastructure, availability, security,
 capacity, or latency evidence.

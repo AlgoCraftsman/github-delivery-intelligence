@@ -220,8 +220,9 @@ separately authorized destructive local-reset procedure.
 - [Dashboard guide](dashboards/README.md) — versioned SQL, manual Metabase setup, and
   screenshot evidence.
 - [Airflow guide](airflow/README.md) — DAG behavior, runtime variables, and smoke path.
-- [Day 14 validation](docs/day-14-validation.md) — observed isolated fresh-clone
-  quickstart commands, results, timing, and preserved service/volume state.
+- [Day 14 validation](docs/day-14-validation.md) — observed default- and
+  alternate-port fresh-clone commands, results, timing, and preserved service/volume
+  state.
 - [Architecture decisions](docs/adr/README.md) — reviewed technology and delivery
   decisions.
 - [15-day build plan](BUILD_PLAN.md) — scope, milestones, and acceptance criteria.
