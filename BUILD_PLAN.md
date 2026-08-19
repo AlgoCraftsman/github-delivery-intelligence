@@ -2,9 +2,12 @@
 
 ## Architecture Review and 15-Day Build Plan
 
-Status: Ready for implementation
+Status: Portfolio MVP implemented and approved for public portfolio release with
+documented limitations
 
 Reviewed: July 21, 2026
+
+Publication review: August 19, 2026
 
 Target: Portfolio-grade MVP in 15 focused working days
 
@@ -564,6 +567,11 @@ Each pull request includes:
 - [x] README includes architecture, quickstart, screenshots, limitations, and demo steps.
 - [x] Security and operations runbooks are complete.
 - [x] The final implementation PR contains a concise reviewer-oriented summary.
+
+Public portfolio approval accepts the documented vulnerability and local-topology
+limitations in [the current publication-readiness review](docs/publication-readiness.md).
+The all-images-and-dependencies criterion remains unchecked because the Airflow
+overlay's transitive dependency resolution is not locked and proved.
 
 ## 14. Deferred extensions
 

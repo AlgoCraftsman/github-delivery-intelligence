@@ -40,7 +40,7 @@ delivery. See [Architecture](docs/architecture.md) for boundaries and limitation
 Prerequisites:
 
 - Python 3.12.13
-- uv 0.11.29
+- uv 0.12.5 for the exact CI toolchain; the project accepts uv 0.12.1 through 0.12.x
 - Docker Desktop with Docker Compose v2
 - GNU Make
 
@@ -223,8 +223,11 @@ separately authorized destructive local-reset procedure.
 - [Day 14 validation](docs/day-14-validation.md) — observed default- and
   alternate-port fresh-clone commands, results, timing, and preserved service/volume
   state.
-- [Day 15 release readiness](docs/day-15-release-readiness.md) — pinning, dependency
-  and image audits, secret review, current validation, and remaining signoff blockers.
+- [Publication readiness](docs/publication-readiness.md) — current licensing,
+  governance, dependency and image audits, validation, limitations, and portfolio
+  publication decision.
+- [Day 15 release readiness](docs/day-15-release-readiness.md) — historical hardening
+  evidence and the signoff state at its reviewed commit.
 - [Architecture decisions](docs/adr/README.md) — reviewed technology and delivery
   decisions.
 - [15-day build plan](BUILD_PLAN.md) — scope, milestones, and acceptance criteria.
@@ -242,9 +245,14 @@ separately authorized destructive local-reset procedure.
   explicit backfill coverage gaps.
 - Metabase dashboards use manual open-source configuration plus checked-in SQL and
   screenshots; automatic paid serialization is not part of this workflow.
-- Day 15 release signoff remains open because live Metabase screenshot currency was
-  not re-proved and dependency/image audit limitations remain. See the
-  release-readiness report for exact evidence.
+- The Python and container vulnerability audits have unresolved fixable findings, and
+  the Airflow overlay's transitive dependencies are not fully locked. See the current
+  [publication-readiness report](docs/publication-readiness.md) for exact scope,
+  evidence, and acceptance limitations.
 
 Security boundaries and production recommendations are detailed in
 [Security](docs/security.md).
+
+## License
+
+This project is available under the [MIT License](LICENSE).

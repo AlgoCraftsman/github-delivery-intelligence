@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-22
+- Amended: 2026-08-19
 
 ## Context
 
@@ -16,5 +17,8 @@ image using Apache Airflow's official constraints instead of the application loc
 
 ## Consequences
 
-Dependency updates are explicit, reviewable changes. Contributors need uv 0.11.29, and
-the project rejects incompatible uv versions.
+Dependency updates are explicit, reviewable changes. CI pins uv 0.12.5 exactly. The
+project accepts uv versions from 0.12.1 through the 0.12 release line so GitHub's
+Dependabot updater and reviewed patch releases can operate without admitting a later
+minor release. Earlier Day 13 through Day 15 evidence remains tied to the uv 0.11.29
+toolchain that actually produced it.
