@@ -16,13 +16,9 @@ portfolio release candidate is **not signed off**. Current blockers are:
 - the Airflow overlay still resolves transitive packages during its image build, so
   the broad dependency-pinning criterion is not yet fully proved;
 - the vulnerability audits found unresolved fixable high and critical findings;
-- the changed commit has local CI-equivalent evidence but no remote GitHub Actions
-  run because nothing was pushed;
 - the checked-in screenshots passed pixel inspection and their SQL contracts are
   current, but a browser-runtime failure prevented fresh inspection of the real
-  Metabase UI;
-- no final implementation pull request exists, and creating one was outside this
-  review's authorization.
+  Metabase UI.
 
 This is a readiness report, not a production-infrastructure, vulnerability-free, or
 end-to-end exactly-once claim.
@@ -41,10 +37,10 @@ end-to-end exactly-once claim.
 | dbt models have documented grains, contracts, tests, and lineage | Proved | Model YAML, `dbt/github_analytics/models/README.md`, fixture assertions, source freshness, and the 322-node fixture build provide current evidence. |
 | DORA labels match available evidence and show coverage | Proved | The fixture-backed marts and eight dashboard contracts preserve `measured`, `configured_proxy`, and `unavailable`, null unavailable values, exclusion reasons, and coverage numerator/denominator/ratio semantics. |
 | Individual contribution leaderboards are absent | Proved | Dashboard SQL and screenshots contain repository/service flow metrics and no contributor grouping or ranking. `docs/metric-definitions.md` explicitly prohibits individual-performance use. |
-| CI, failure drills, and actual benchmark evidence are green | Incomplete | The post-merge `main` run at `ad7df7b` passed all four jobs, and local equivalents pass at `d5be06f`. Day 13 contains observed drill/benchmark evidence. There is no remote CI run for the unpushed Day 15 commit. |
+| CI, failure drills, and actual benchmark evidence are green | Proved | PR #25's final branch head passed Python quality, Compose, dbt, and Airflow CI. Day 13 contains the observed drill and benchmark evidence, and local equivalents also passed at `d5be06f`. |
 | README includes architecture, quickstart, screenshots, limitations, and demo steps | Proved | All five sections are present and link to detailed guides and observed validation. |
 | Security and operations runbooks are complete | Proved | The runbooks cover trust boundaries, local-only credentials, reader isolation, replay, DLQ, checkpoints, recovery, rotation, and safe volume-preserving operation. Completion does not mean the audit was clean. |
-| Final implementation PR has a reviewer-oriented summary | Pending | No Day 15 PR exists. No PR or GitHub object was created or changed in this review. |
+| Final implementation PR has a reviewer-oriented summary | Proved | [PR #25](https://github.com/AlgoCraftsman/github-delivery-intelligence/pull/25) summarizes the hardening, rationale, validation, limitations, and deferred dependency decisions. |
 
 ## Reproducibility hardening
 
@@ -204,15 +200,16 @@ printed `Deterministic demo completed successfully.` Ordinary `make down` stoppe
 isolated containers and retained their PostgreSQL volume. It did not truncate or
 mutate append-only `raw.github_events`.
 
-### Remote CI boundary
+### Remote CI
 
 The post-merge `main` run for base commit `ad7df7b` passed Python quality, Compose,
 dbt, and Airflow jobs:
 
 <https://github.com/AlgoCraftsman/github-delivery-intelligence/actions/runs/32203307418>
 
-That run is prior evidence, not a current run for `d5be06f`. Nothing was pushed, so
-the changed implementation has no remote CI result.
+PR #25 then ran the same four jobs against its final branch head. Python quality,
+Compose, dbt, and Airflow all passed before merge. The PR remained open until GitHub
+reported it clean and mergeable.
 
 ## Service and volume state
 
@@ -240,8 +237,8 @@ No volume was deleted, recreated for recovery, or used with PostgreSQL 18.
   required GitHub plan or public visibility was unavailable. Branch protection is
   not claimed.
 - No release or tag exists.
-- No push, PR/issue modification, release/tag creation, merge, or repository-setting
-  change occurred during this review.
+- The Day 15 branch was pushed and PR #25 was created and merged only after its final
+  checks passed. No issue, release, tag, or repository-setting change occurred.
 
 ## Authoritative references
 

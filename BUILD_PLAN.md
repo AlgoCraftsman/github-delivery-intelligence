@@ -560,10 +560,10 @@ Each pull request includes:
 - [x] dbt models have documented grains, contracts, tests, and lineage.
 - [x] DORA labels match available evidence and show coverage.
 - [x] Individual contribution leaderboards are absent.
-- [ ] CI, failure drills, and actual benchmark evidence are green.
+- [x] CI, failure drills, and actual benchmark evidence are green.
 - [x] README includes architecture, quickstart, screenshots, limitations, and demo steps.
 - [x] Security and operations runbooks are complete.
-- [ ] The final implementation PR contains a concise reviewer-oriented summary.
+- [x] The final implementation PR contains a concise reviewer-oriented summary.
 
 ## 14. Deferred extensions
 

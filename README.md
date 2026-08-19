@@ -242,9 +242,9 @@ separately authorized destructive local-reset procedure.
   explicit backfill coverage gaps.
 - Metabase dashboards use manual open-source configuration plus checked-in SQL and
   screenshots; automatic paid serialization is not part of this workflow.
-- Day 15 release signoff remains open because the current commit has no remote CI,
-  live Metabase screenshot currency was not re-proved, and dependency/image audit
-  limitations remain. See the release-readiness report for exact evidence.
+- Day 15 release signoff remains open because live Metabase screenshot currency was
+  not re-proved and dependency/image audit limitations remain. See the
+  release-readiness report for exact evidence.
 
 Security boundaries and production recommendations are detailed in
 [Security](docs/security.md).
