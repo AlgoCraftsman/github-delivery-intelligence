@@ -13,6 +13,10 @@ updates:
     directory: /infra
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: postgres
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
