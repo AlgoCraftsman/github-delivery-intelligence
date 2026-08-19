@@ -1,352 +1,245 @@
 # GitHub Delivery Intelligence
 
-Event-driven engineering analytics using GitHub App webhooks, Kafka, Airflow, dbt,
-PostgreSQL, and Metabase to produce replayable PR-flow, evidence-aware software
-delivery metrics, versioned dashboard queries, and deterministic visual evidence.
+An event-driven engineering analytics portfolio project that turns GitHub App
+webhooks and historical API data into replayable pull-request flow and
+evidence-aware delivery metrics. Kafka, PostgreSQL, dbt, Airflow, FastAPI, and
+Metabase are connected through explicit acknowledgement, transaction, lineage,
+coverage, and security boundaries.
 
-The project is being built from the reviewed [15-day build plan](BUILD_PLAN.md). The
-current Day 13 checkpoint adds deterministic fixture replay, volume-preserving failure
-drills, and a measured local benchmark to the signed webhook, idempotent raw warehouse,
-independent PR monitor, restartable history backfill, scheduled analytics refresh,
-dashboards, and contracted dbt analytics paths.
+The portfolio value is the evidence discipline: duplicate delivery and crash windows
+have durable idempotency boundaries; unavailable metrics stay null with reasons; CI
+failures are not mislabeled as production failures; dashboards are backed by versioned
+SQL and deterministic fixtures; and measured claims link to reproducible local
+evidence.
 
-## Prerequisites
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    GH[GitHub webhooks] --> API[FastAPI + HMAC]
+    API -->|Kafka ack before 202| K[raw topic]
+    K --> W[warehouse-writer]
+    K --> P[PR monitor]
+    W --> R[(append-only raw)]
+    W --> D[DLQ]
+    P --> S[(PR projection + outbox)]
+    B[restartable API backfill] --> R
+    A[Airflow schedules backfill + analytics] --> B
+    R --> T[dbt staging → intermediate → marts]
+    T --> M[read-only Metabase]
+```
+
+The two Kafka consumers use independent groups. PostgreSQL effects or acknowledged
+dead letters happen before source offsets advance. Airflow schedules backfill and
+analytics work; it does not poll Kafka or orchestrate individual events. This is
+at-least-once processing with idempotent durable effects, not end-to-end exactly-once
+delivery. See [Architecture](docs/architecture.md) for boundaries and limitations.
+
+## Five-minute quickstart
+
+Prerequisites:
 
 - Python 3.12.13
 - uv 0.11.29
 - Docker Desktop with Docker Compose v2
-- GNU Make (optional; the underlying commands also work directly)
+- GNU Make
 
-## Foundation quickstart
+From a fresh clone, install the locked environment and run the ordinary deterministic
+demo:
 
 ```bash
 uv sync --frozen
-make check
-make up
-make migrate
+make demo
 make ps
-make dashboard-up
-make dashboard-sql-check
 ```
 
-`make up` starts Kafka on `localhost:9092` and PostgreSQL on `localhost:55432`, then waits
-for both health checks and creates the raw and DLQ topics if absent. `make migrate`
-applies the idempotent raw-table migration to an existing named volume. The credentials
-in `.env.example` are local-only defaults.
+`make demo` starts the core Kafka and PostgreSQL services, creates the raw and DLQ
+topics, applies idempotent migrations, reloads only the isolated
+`raw.github_events_fixture` table, runs fixture-backed dbt freshness/build assertions,
+validates dashboard SQL, and prints the evidence-aware metric rows. It requires no
+GitHub token, private key, real repository, or `.env` file. Repeating it does not
+truncate or mutate append-only `raw.github_events`.
 
-Stop services without deleting data:
+Initial image downloads or dependency installation can extend the first run beyond
+five minutes; the workflow itself is the reviewer quickstart once prerequisites are
+available. Troubleshooting and recovery are in the
+[operations runbook](docs/operations-runbook.md).
+
+Stop the core services without deleting their named volumes:
 
 ```bash
 make down
 ```
 
-Stop only the optional Metabase service while preserving its application data:
+Do not use `docker compose down -v` for routine shutdown, migration, or recovery.
 
-```bash
-make dashboard-down
-```
-
-## Local dashboard demo
-
-`make dashboard-up` starts PostgreSQL, reapplies the idempotent read-only analytics
-role, and starts the optional Compose `dashboards` profile. Open
-<http://localhost:3000> and sign in with `demo@example.invalid` /
-`local_only_metabase_demo1`. The Metabase database user is `metabase_reader` /
-`local_only_read_only`. All of these passwords are local-only defaults and are not
-production-safe.
-
-The demo uses checked-in SQL plus manual Metabase configuration; it does not claim
-paid serialization as an OSS feature. Rebuild the isolated fixture marts before
-regenerating screenshots:
+To run a second deterministic stack concurrently in PowerShell, give it a distinct
+Compose project and unused host ports:
 
 ```powershell
-$env:PGPASSWORD='local_only_change_me'
-psql --host localhost --port 55432 --username github_analytics `
-  --dbname github_analytics --set ON_ERROR_STOP=1 `
-  --file dbt/github_analytics/fixtures/load_github_events.sql
+$env:COMPOSE_PROJECT_NAME = 'github-delivery-intelligence-day14-isolated'
+$env:KAFKA_PORT = '19092'
+$env:POSTGRES_PORT = '55433'
+$env:DBT_POSTGRES_PORT = '55433'
 
-uv run dbt source freshness `
-  --project-dir dbt/github_analytics --profiles-dir dbt/github_analytics `
-  --vars '{"github_events_identifier": "github_events_fixture"}'
-
-uv run dbt build `
-  --project-dir dbt/github_analytics --profiles-dir dbt/github_analytics `
-  --vars '{"github_events_identifier": "github_events_fixture", "fixture_validation": true}'
-
-make dashboard-sql-check
+uv sync --frozen
+make demo
+make ps
 ```
 
-The loader truncates only `raw.github_events_fixture`. Dashboard definitions, metric
-status and coverage semantics, manual card configuration, and screenshot QA are in
-[`dashboards/README.md`](dashboards/README.md).
+`KAFKA_PORT` and `POSTGRES_PORT` control the host bindings, while
+`DBT_POSTGRES_PORT` must match the overridden PostgreSQL host port. The distinct
+`COMPOSE_PROJECT_NAME` isolates container, network, and volume names. Stop that
+project with ordinary `make down` while the same variables are set; this preserves
+its volumes. Never use `down -v` for this workflow.
+
+## What the demo proves
+
+The deterministic workflow proves that the checked-in synthetic source data is fresh,
+all contracted dbt models and fixture assertions pass, metric status/coverage
+semantics match expected outcomes, dashboard SQL matches its reviewed snapshot, and
+the core services start with idempotent migrations.
+
+It does not exercise a live GitHub App, real webhook secret, real installation token,
+Metabase content import, a production Airflow deployment, dependency outages, or
+production capacity. The heavier `make day13-evidence` workflow is deliberately
+separate because it appends unique synthetic live-raw history and temporarily stops
+Kafka and PostgreSQL for failure drills.
+
+## Dashboards
+
+Start the optional local Metabase profile after the demo:
+
+```bash
+make dashboard-up
+```
+
+Open <http://localhost:3000>. The documented local administrator is
+`demo@example.invalid` / `local_only_metabase_demo1`; the database reader is
+`metabase_reader` / `local_only_read_only`. These are local-demo values only and are
+not production-safe. The open-source workflow uses versioned SQL and manual Metabase
+configuration; it does not claim paid serialization.
 
 ![Delivery performance dashboard](dashboards/screenshots/delivery-performance.png)
 
 ![Pull-request flow dashboard](dashboards/screenshots/pull-request-flow.png)
 
-## Webhook contract
+Card definitions, fixture outcomes, screenshot procedure, and query contracts are in
+the [dashboard guide](dashboards/README.md). Stop only Metabase while preserving its
+application data with `make dashboard-down`.
 
-The receiver supports `pull_request`, `pull_request_review`, `workflow_run`,
-`deployment`, and `deployment_status`. It rejects invalid signatures, missing delivery
-headers, unsupported events, malformed payloads, and bodies larger than
-`GITHUB_WEBHOOK_MAX_BODY_BYTES`.
+## Metric availability
 
-The outer envelope is strict and versioned. The original JSON payload remains intact and
-accepts unknown fields. Synthetic fixtures for all five event families live under
-`tests/fixtures`.
+| Metric | Current status | Evidence and coverage |
+|---|---|---|
+| Deployment frequency | `measured` or `configured_proxy` | Configured primary evidence / all candidate production evidence |
+| Change lead time | `measured` or `configured_proxy` when linked | Exact-SHA-linked eligible merged changes / eligible merged changes |
+| Failed deployment recovery time | `unavailable` | Intervention and recovery evidence is not configured or modeled |
+| Change failure rate | `unavailable` | Production failure and remediation evidence is not configured or modeled |
+| Deployment rework rate | `unavailable` | Unplanned-rework evidence is not configured or modeled |
 
-The application fails closed with `503` when no publisher is configured. Day 3
-implements the publisher with `acks=all`, producer idempotence, repository-keyed
-records, and a bounded delivery callback. Enqueuing a record locally is not treated as
-success: the receiver returns `202` only after Kafka reports delivery and returns `503`
-on queue, callback, or timeout failure.
+Unavailable values remain null with machine-readable exclusion reasons. Workflow-run
+production evidence is an explicitly configured proxy; a CI failure is not a
+production failure. Results are repository/service aggregates and must not be used for
+contributor ranking or individual-performance reporting. Exact formulas, grains,
+inclusion rules, PR-flow definitions, and interpretation cautions are in
+[Metric definitions](docs/metric-definitions.md).
 
-Run the local receiver after copying `.env.example` to `.env`, changing the webhook
-secret, and starting the core services:
+## Measured replay and failure evidence
+
+The checked-in Day 13 report records an observed local Docker Desktop run, not a target
+or production benchmark:
+
+| Evidence | Observed result |
+|---|---:|
+| Signed webhook burst | 500/500 returned `202` after Kafka acknowledgement |
+| Unique append-only raw rows | 500 |
+| Lost acknowledged events | 0 |
+| Receiver HTTP-to-Kafka-ack throughput | 179.892 requests/s |
+| Receiver latency | p50 120.050 ms; p95 194.072 ms; max 225.366 ms |
+| Initial warehouse processing | 89.807 records/s; p95 7.465 ms |
+| Duplicate replay | 500 duplicate outcomes; 0 duplicate durable effects |
+| Duplicate-processing-to-offset-commit | 408.005 records/s; p95 2.804 ms |
+| Crash after database commit | Replay produced one durable row and `duplicate` |
+| Poison record | Acknowledged DLQ bytes/lineage before source offset advancement |
+| Kafka outage | Bounded `503`, recovery `202`, one durable row |
+| PostgreSQL outage | No source-offset advance; restart replay inserted the row |
+| Backfill resume | Continued at page 2 and completed with two durable rows |
+| Synthetic checks | 7 passed |
+| Live GitHub App PR lifecycle | `unavailable` |
+
+The run used one local Kafka broker and one local PostgreSQL instance. It is semantic
+and local workload evidence, not high availability or production capacity evidence.
+Environment details, provenance, scopes, and exact commands are in
+[Day 13 evidence](docs/day-13-evidence.md) and the [e2e guide](tests/e2e/README.md).
+
+## Running the services
+
+Copy `.env.example` to ignored `.env` and replace its fake values before connecting to
+a real GitHub App. Start each long-running process under a separate supervisor or
+terminal:
 
 ```bash
-cp .env.example .env
-make up
 make webhook
-```
-
-The receiver listens on `http://127.0.0.1:8000` by default:
-
-- `POST /webhooks/github` validates and durably publishes supported events.
-- `GET /health/live` reports process liveness.
-- `GET /health/ready` checks Kafka metadata availability.
-- `GET /metrics` exposes request, publish-result, and publish-latency metrics in
-  Prometheus text format.
-
-## Warehouse writer
-
-The `warehouse-writer` consumer group reads `github.events.raw.v1`, validates the
-versioned envelope, and inserts the complete original payload into
-`raw.github_events`. The durable uniqueness boundary is `(source, source_record_key)`;
-webhook rows use the real GitHub delivery ID as the source record key.
-
-Run it after copying `.env.example` to `.env`, starting the services, and applying the
-migration:
-
-```bash
-make up
-make migrate
 make warehouse
-```
-
-Automatic Kafka commits and automatic offset storage are disabled. For a valid record,
-the writer commits PostgreSQL before synchronously committing that message's Kafka
-offset. A replay after a crash in between those operations reaches the uniqueness
-constraint and creates no second raw row.
-
-Unprocessable records are published to `github.events.dlq.v1` with their original bytes
-base64 encoded and their source topic, partition, and offset retained. The writer waits
-for the DLQ delivery callback before committing the source offset. If PostgreSQL, DLQ
-publishing, or offset commit fails, the worker stops without advancing past an
-unconfirmed durable boundary.
-
-This is at-least-once processing with idempotent database effects. It is not end-to-end
-exactly-once delivery.
-
-## Pull-request monitor
-
-The independent `pr-monitor` consumer group reads the same raw topic without sharing
-progress with `warehouse-writer`. It maintains `serving.open_pull_requests`, selects the
-earliest submitted review from someone other than the PR author, and retains a source
-watermark so delayed snapshots cannot reopen or regress newer PR state.
-
-Run it after applying the migrations:
-
-```bash
-make up
-make migrate
 make pr-monitor
 ```
 
-The default stale threshold is 24 hours and the sweep interval is 60 seconds. Both are
-configurable through `PR_MONITOR_STALE_AFTER_HOURS` and
-`PR_MONITOR_STALE_SWEEP_INTERVAL_SECONDS`. Draft PRs and PRs with an eligible review are
-excluded from the sweep.
+The receiver exposes:
 
-Each eligible stale PR creates an `ops.alert_outbox` row with a unique key derived from
-the real repository and pull-request identities. Repeated sweeps create no duplicate
-effect. Closing a PR removes it from the open projection and cancels its still-pending
-alert. External Slack dispatch remains deferred; the outbox is the durable Day 5
-boundary.
+- `POST /webhooks/github` for signed supported events;
+- `GET /health/live` for process liveness;
+- `GET /health/ready` for bounded Kafka readiness; and
+- `GET /metrics` for Prometheus text metrics.
 
-## Historical GitHub backfill
-
-The `github-backfill` command reads pull requests through GitHub GraphQL, then traverses
-the complete review and commit connections for each PR created in an explicit half-open
-window (`start <= createdAt < end`). It also reads workflow runs, deployments, and
-deployment statuses through GitHub's versioned REST API. GraphQL uses opaque forward
-cursors; REST checkpoints store the next positive page number. Both use a configured
-page size from 1 through GitHub's maximum of 100.
-
-Copy `.env.example` to `.env` and replace the example values with a short-lived token
-and the real repository and GitHub App installation identities. Backfill source records
-do not fabricate webhook delivery IDs. Apply the checkpoint migration and run a bounded
-window:
+Historical backfill requires a short-lived token and explicit half-open window:
 
 ```bash
-make migrate
 make backfill \
   BACKFILL_START=2026-01-01T00:00:00Z \
   BACKFILL_END=2026-02-01T00:00:00Z
 ```
 
-Each API page inserts its selected GraphQL resource objects into
-`raw.github_events` and advances `raw.backfill_checkpoints` in the same PostgreSQL
-transaction. The source keys use GitHub global node IDs plus the resource version or
-state where it can change. Repeating a page or restarting from a stored opaque cursor
-therefore produces no duplicate raw effect.
+Each API page and restart checkpoint commits in one PostgreSQL transaction. See the
+[operations runbook](docs/operations-runbook.md) for service operation, DLQ inspection,
+offset safeguards, backfill resume, outage recovery, Airflow, secret rotation, and the
+separately authorized destructive local-reset procedure.
 
-The client reads GitHub's returned rate-limit headers rather than assuming a universal
-allowance. Primary exhaustion waits until `x-ratelimit-reset`; secondary limits honor
-`retry-after` or use bounded exponential waits beginning at the documented one-minute
-minimum. Retries stop after the configured budget.
+## Documentation map
 
-The repository pull-request connection and deployment endpoint have no direct
-creation-time range argument. This MVP filters their complete paginated responses
-locally; very large repositories may therefore require scanning older pages. GitHub
-caps a filtered workflow-run search at 1,000 results, so the command fails without
-advancing that checkpoint when the requested window is too large and asks for a
-smaller window. GitHub retains historical deployment statuses for only 90 days, so an
-older backfill may have an explicit coverage gap even when deployment records remain.
+- [Architecture](docs/architecture.md) — component flow, acknowledgement/transaction
+  boundaries, ordering, delayed evidence, and local versus production topology.
+- [Metric definitions](docs/metric-definitions.md) — formulas, grains, status,
+  coverage, exclusions, and interpretation cautions.
+- [Security](docs/security.md) — trust boundaries, implemented controls, permissions,
+  reader isolation, secrets, and production hardening.
+- [Operations runbook](docs/operations-runbook.md) — startup, health, replay, DLQ,
+  recovery, checkpoints, orchestration, rotation, and reset safeguards.
+- [dbt analytics guide](dbt/github_analytics/README.md) — source shapes, model layers,
+  fixture counts, and assertion commands.
+- [Dashboard guide](dashboards/README.md) — versioned SQL, manual Metabase setup, and
+  screenshot evidence.
+- [Airflow guide](airflow/README.md) — DAG behavior, runtime variables, and smoke path.
+- [Day 14 validation](docs/day-14-validation.md) — observed default- and
+  alternate-port fresh-clone commands, results, timing, and preserved service/volume
+  state.
+- [Architecture decisions](docs/adr/README.md) — reviewed technology and delivery
+  decisions.
+- [15-day build plan](BUILD_PLAN.md) — scope, milestones, and acceptance criteria.
 
-The token needs read access to repository contents and metadata for GraphQL, Actions
-read access for workflow runs, and Deployments read access for deployments and their
-statuses.
+## Limitations
 
-## Airflow orchestration
+- The checked-in workflow has no live GitHub App credentials or completed live PR
+  lifecycle; that evidence remains explicitly unavailable.
+- Failed GitHub delivery discovery/redelivery and external alert dispatch are deferred.
+- Kafka is a plaintext single-broker local topology with replication factor one.
+- PostgreSQL, Metabase, and `.env.example` use local-only example passwords.
+- The Airflow path validates an image and DAG behavior, not a production scheduler or
+  executor topology.
+- Exact-SHA linkage does not infer Git ancestry, and upstream history limits can leave
+  explicit backfill coverage gaps.
+- Metabase dashboards use manual open-source configuration plus checked-in SQL and
+  screenshots; automatic paid serialization is not part of this workflow.
 
-`airflow/Dockerfile` extends the pinned Apache Airflow 3.3.0 Python 3.12 image, copies
-the tested application package and dbt project, installs pinned backfill plus
-`dbt-core==1.12.0` / `dbt-postgres==1.11.0` dependencies, pins Airflow to the base-image
-version, and runs `pip check`. Webhook and Kafka dependencies stay out of this image.
-Build it and verify that both expected DAGs import without errors:
-
-```bash
-make airflow-image
-make airflow-dag-check
-```
-
-The `github_backfill` DAG is manual-only and allows one active run. Its trigger form
-requires an inclusive `window_start` and exclusive `window_end`, both as offset-aware
-ISO 8601 timestamps. The task invokes the tested `github-backfill` package and has
-three bounded retries. Because each API page and checkpoint commit in one PostgreSQL
-transaction, an Airflow retry resumes from durable progress and duplicate source keys
-remain harmless.
-
-The `analytics_refresh` DAG runs hourly in UTC with `catchup=False` and one active run.
-Its ordered tasks persist `running` and check the raw watermark/freshness, execute the
-contracted dbt build, then persist `succeeded`. Exhausted failures persist `failed` and
-re-raise so Airflow agrees with the durable ledger. `(dag_id, dag_run_id)` makes task
-retries update one row. Bounded summaries come from explicit `sources.json` and
-`run_results.json` target artifacts; command output, credentials, payloads, and full
-tracebacks are not stored.
-
-After starting PostgreSQL, applying migrations, and loading the isolated fixture, run
-the supported Airflow 3.3 test path inside the image:
-
-```bash
-make airflow-analytics-check
-```
-
-This is still an image and DAG artifact, not a production scheduler/API/executor
-topology. Streaming consumers remain long-running services outside Airflow. See
-`airflow/README.md` for runtime variables, container paths, and inspection queries.
-
-## dbt analytics models
-
-The dbt project pins `dbt-core==1.12.0` and `dbt-postgres==1.11.0`. The adapter
-and Core use independent version numbers; this is the compatible stable pair released
-for the reviewed baseline. Six contracted staging views normalize webhook payloads and
-GraphQL/REST backfill wrappers:
-
-- pull requests
-- pull-request reviews
-- pull-request commit associations
-- workflow runs
-- deployments
-- deployment statuses
-
-Each view retains `event_id`, source identity, repository and installation lineage,
-warehouse load time, and the raw JSON payload. Entity keys normalize both ingestion
-paths without pretending that a GraphQL node ID is a REST database ID.
-
-Four contracted intermediate views collapse duplicate snapshots and expose reusable
-stateful logic:
-
-- resolved pull-request lifecycle
-- first eligible non-author review
-- production deployments with resolved status history
-- exact-SHA change-to-successful-deployment linkage
-
-The change linkage prefers merge-commit evidence and falls back to a directly matched
-pull-request commit. It does not infer Git ancestry or claim coverage for an unmatched
-change.
-
-The contracted marts expose the core analytics vertical slice and run health:
-
-- repository evidence configuration and a bounded date spine
-- pull-request lifecycle and exact-SHA deployment linkage
-- measured deployment statuses and explicitly configured workflow proxies
-- one repository/date/metric row with status, coverage, definition version, and
-  exclusion reason
-- one `analytics_refresh` run with watermark age, dbt result counts, bounded failure
-  classification, and latest-success state
-
-Deployment frequency is measured only after repository configuration. Change lead
-time is calculated only for successfully linked changes and publishes linkage
-coverage. Failed deployment recovery time, change failure rate, and deployment
-rework rate remain unavailable until defensible intervention evidence is configured
-and modeled; CI failures are not treated as production failures.
-
-Against the live `raw.github_events` table:
-
-```bash
-make dbt-debug
-make dbt-freshness
-make dbt-build
-```
-
-Deterministic validation uses the dedicated `raw.github_events_fixture` table. The
-loader transactionally reloads only that fixture table, gives resource timestamps
-fixed synthetic values, and sets warehouse load time relative to execution so
-freshness does not expire. CI loads it, runs `dbt source freshness`, and runs `dbt
-build` with fixture assertions enabled. Exact local commands, resource counts, and
-manually calculated Day 9 and Day 10 outcomes are documented in
-`dbt/github_analytics/README.md`.
-
-## Replay, failure-drill, and benchmark evidence
-
-Run the complete local evidence workflow from the repository root:
-
-```powershell
-make UV=.venv/Scripts/uv.exe day13-evidence
-```
-
-The workflow appends uniquely identified synthetic fixture records, exercises duplicate
-and crash-window replay, verifies acknowledged DLQ handling, briefly stops and restarts
-the existing Kafka and PostgreSQL services, and resumes a durable backfill checkpoint.
-It never truncates `raw.github_events` or deletes Compose containers or named volumes.
-
-The latest [reviewer-facing Day 13 evidence table](docs/day-13-evidence.md) records seven
-passed synthetic checks and leaves the live GitHub App PR lifecycle explicitly
-`unavailable`. On the documented local Docker Desktop environment, all 500 signed
-requests returned `202` after Kafka acknowledgement and landed as 500 unique raw rows.
-The receiver scope measured 179.892 requests/s with p50 120.050 ms and p95 194.072 ms.
-These measurements describe the named local single-broker workload; they are not a
-production capacity or high-availability claim.
-
-## Current scope
-
-Day 13 establishes measured local evidence for acknowledged fixture landing, duplicate
-absorption, crash replay, DLQ acknowledgement ordering, Kafka and PostgreSQL recovery,
-and backfill cursor resume. The scheduled source-to-mart refresh evidence, Day 11
-dashboard SQL, and screenshots remain unchanged. Synthetic drills are not production
-incidents, dashboard-level duplicate/DLQ telemetry is not inferred from them, and the
-live GitHub App PR lifecycle remains unavailable until a real delivery is observed. The
-local single-broker Kafka deployment and Airflow test container demonstrate semantics;
-neither is a production availability topology.
+Security boundaries and production recommendations are detailed in
+[Security](docs/security.md).
