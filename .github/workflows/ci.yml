@@ -20,7 +20,7 @@ env:
 jobs:
   quality:
     name: Python quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out repository
@@ -54,7 +54,7 @@ jobs:
 
   compose:
     name: Validate Compose
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Check out repository
@@ -65,11 +65,11 @@ jobs:
 
   dbt:
     name: Validate dbt staging models
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:17.10-bookworm
+        image: postgres:17.10-bookworm@sha256:9b18b78397054fce88a9552e9d5a3ad5bb7fd258c5b3cc1c5028e46373d6ea8f
         env:
           POSTGRES_DB: github_analytics
           POSTGRES_USER: github_analytics
@@ -140,7 +140,7 @@ jobs:
 
   airflow:
     name: Validate Airflow image and DAG
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Check out repository

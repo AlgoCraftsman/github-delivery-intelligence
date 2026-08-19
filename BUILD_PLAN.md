@@ -551,19 +551,19 @@ Each pull request includes:
 ## 13. Release acceptance checklist
 
 - [x] Fresh clone starts the core stack with documented commands.
-- [ ] No implementation work was committed directly to `main`.
+- [x] No implementation work was committed directly to `main`.
 - [ ] All images and dependencies use pinned versions or digests.
-- [ ] Webhook signature validation and broker acknowledgement are tested.
-- [ ] Raw writes and alert effects are idempotent under replay.
-- [ ] Kafka offsets advance only after durable effects or DLQ acknowledgement.
-- [ ] Backfill is restartable and rate-limit aware.
-- [ ] dbt models have documented grains, contracts, tests, and lineage.
-- [ ] DORA labels match available evidence and show coverage.
-- [ ] Individual contribution leaderboards are absent.
-- [ ] CI, failure drills, and actual benchmark evidence are green.
-- [ ] README includes architecture, quickstart, screenshots, limitations, and demo steps.
-- [ ] Security and operations runbooks are complete.
-- [ ] The final implementation PR contains a concise reviewer-oriented summary.
+- [x] Webhook signature validation and broker acknowledgement are tested.
+- [x] Raw writes and alert effects are idempotent under replay.
+- [x] Kafka offsets advance only after durable effects or DLQ acknowledgement.
+- [x] Backfill is restartable and rate-limit aware.
+- [x] dbt models have documented grains, contracts, tests, and lineage.
+- [x] DORA labels match available evidence and show coverage.
+- [x] Individual contribution leaderboards are absent.
+- [x] CI, failure drills, and actual benchmark evidence are green.
+- [x] README includes architecture, quickstart, screenshots, limitations, and demo steps.
+- [x] Security and operations runbooks are complete.
+- [x] The final implementation PR contains a concise reviewer-oriented summary.
 
 ## 14. Deferred extensions
 
