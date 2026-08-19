@@ -1,5 +1,9 @@
 # Day 15 release-readiness review
 
+> Historical review: this report preserves the evidence and decision at its reviewed
+> commit. See the [current publication-readiness review](publication-readiness.md) for
+> the later licensing, audit, validation, and public-portfolio decision.
+
 Review date: 2026-08-18 America/New_York (some tool timestamps are 2026-08-19
 UTC)
 

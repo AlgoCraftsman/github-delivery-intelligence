@@ -7,6 +7,7 @@ name = "github-delivery-intelligence"
 version = "0.1.0"
 description = "Replayable GitHub engineering analytics with evidence-aware delivery metrics."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "confluent-kafka==2.15.0",
@@ -36,7 +37,7 @@ dev = [
 ]
 
 [tool.uv]
-required-version = "==0.11.29"
+required-version = ">=0.12.1,<0.13"
 
 [tool.uv.build-backend]
 module-name = "github_analytics"
