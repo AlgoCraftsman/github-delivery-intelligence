@@ -52,7 +52,7 @@ services:
       start_period: 10s
 
   metabase:
-    image: metabase/metabase:v0.63.13@sha256:6e188e7068c6e9cf7b24480ada80f335bca9135765764ee827245f44ffa9eace
+    image: metabase/metabase:v0.65.2.6@sha256:81dc964c9f2cf4ba3a44535bfb6f3a7f243e718e137924ffa294ede68b57b6b3
     profiles: [dashboards]
     restart: unless-stopped
     depends_on:
